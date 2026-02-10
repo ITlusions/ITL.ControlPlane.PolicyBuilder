@@ -1,0 +1,11 @@
+pydantic>=2.0.0
+
+[dev]
+pytest>=7.0
+pytest-asyncio>=0.21
+pytest-cov>=4.0
+mypy>=1.0
+ruff>=0.1
+
+[yaml]
+PyYAML>=6.0

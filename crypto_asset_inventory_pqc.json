@@ -1,0 +1,556 @@
+{
+  "metadata": {
+    "organization": "ITL Security",
+    "assessment_date": "2026-02-10",
+    "pqc_readiness_version": "1.0",
+    "nist_standards": {
+      "FIPS_203": "ML-KEM (Key Encapsulation Mechanism)",
+      "FIPS_204": "ML-DSA (Digital Signatures)",
+      "FIPS_205": "SLH-DSA (Stateless Hash-based Signatures)"
+    },
+    "quantum_threat_timeline": {
+      "now_to_2026": "Harvest-now-decrypt-later attacks active",
+      "2026_to_2030": "Quantum advantage for specific problems",
+      "2030_plus": "Cryptographically relevant quantum computers (CRQC) likely"
+    }
+  },
+  "crypto_assets": [
+    {
+      "id": "CA_001",
+      "asset_type": "SSH Keys",
+      "locations": [
+        "Git servers (GitHub, GitLab)",
+        "Production servers",
+        "Developer workstations",
+        "CI/CD pipelines"
+      ],
+      "algorithm": "RSA-4096 / ED25519",
+      "quantum_status": "VULNERABLE",
+      "risk_level": "CRITICAL",
+      "data_sensitivity": "HIGH",
+      "crypto_period": "Typically 2-5 years",
+      "post_quantum_migration": {
+        "viable_replacement": "ML-KEM (key exchange) + ML-DSA (signatures)",
+        "timeline_urgency": "IMMEDIATE (next 12 months)",
+        "implementation_complexity": "HIGH - Requires SSH protocol changes",
+        "blockers": [
+          "OpenSSH needs to implement RFC 8308 extensions",
+          "ALL SSH servers need updating",
+          "Backward compatibility with classic keys"
+        ]
+      },
+      "risk_analysis": {
+        "harvest_now_risk": "VERY_HIGH - SSH keys already being targeted",
+        "exposure_window": "Keys valid 2-5 years = data vulnerable for 7-12+ years",
+        "threat_actors": "Nation states, data brokers collecting for CRQC decryption",
+        "estimated_compromise_value": "Access to entire infrastructure"
+      }
+    },
+    {
+      "id": "CA_002",
+      "asset_type": "TLS/SSL Certificates",
+      "locations": [
+        "Web servers (HTTPS)",
+        "API gateways",
+        "Database connections",
+        "Microservices inter-communication"
+      ],
+      "algorithm": "RSA-2048 / ECDSA P-256",
+      "quantum_status": "VULNERABLE",
+      "risk_level": "CRITICAL",
+      "data_sensitivity": "VERY_HIGH",
+      "crypto_period": "1-3 years (certificate validity)",
+      "post_quantum_migration": {
+        "viable_replacement": "Hybrid certificates (RSA + ML-KEM) or PQC-only",
+        "timeline_urgency": "HIGH (next 6-18 months)",
+        "implementation_complexity": "MEDIUM - Most vendors providing hybrid support",
+        "blockers": [
+          "Certificate authorities need FIPS 203/204 support",
+          "Client TLS libraries must support hybrids",
+          "Performance impact of hybrid certificates (larger size)"
+        ],
+        "standards": "RFC 9146 - TLS 1.3 with ML-KEM"
+      },
+      "risk_analysis": {
+        "harvest_now_risk": "CRITICAL - All HTTPS traffic being captured",
+        "session_data_exposure": "Customer data, API responses, authentication tokens",
+        "exposure_window": "Certificate valid 1-3 years + data retention laws mean 7+ years total",
+        "threat_actors": "Sophisticated adversaries with computational resources",
+        "estimated_compromise_value": "Complete user privacy breach, API abuse"
+      }
+    },
+    {
+      "id": "CA_003",
+      "asset_type": "API Keys & OAuth Tokens",
+      "locations": [
+        "API authentication",
+        "Third-party integrations",
+        "Microservice-to-microservice auth",
+        "Configuration management"
+      ],
+      "algorithm": "HMAC-SHA256 / JWT with RSA signatures",
+      "quantum_status": "PARTIALLY_VULNERABLE",
+      "risk_level": "HIGH",
+      "data_sensitivity": "HIGH",
+      "crypto_period": "Variable (often 6-12 months)",
+      "post_quantum_migration": {
+        "viable_replacement": "ML-DSA for JWT signatures, hybrid JWT tokens",
+        "timeline_urgency": "HIGH (next 12-24 months)",
+        "implementation_complexity": "MEDIUM - Application-level changes",
+        "blockers": [
+          "JWT libraries need PQC support",
+          "OAuth2 spec needs updating",
+          "Token size increases with PQC"
+        ]
+      },
+      "risk_analysis": {
+        "harvest_now_risk": "HIGH - API traffic increasingly targeted",
+        "impersonation_risk": "Forged tokens could access all protected resources",
+        "scope": "API abuse, data theft, service disruption",
+        "estimated_compromise_value": "Full API access to customer data"
+      }
+    },
+    {
+      "id": "CA_004",
+      "asset_type": "Database Encryption Keys",
+      "locations": [
+        "Transparent Data Encryption (TDE)",
+        "Column-level encryption",
+        "Backup encryption",
+        "AWS KMS, Azure Key Vault, HashiCorp Vault"
+      ],
+      "algorithm": "AES-256 (symmetric), RSA-4096 (for key wrapping)",
+      "quantum_status": "PARTIALLY_VULNERABLE",
+      "risk_level": "CRITICAL",
+      "data_sensitivity": "EXTREMELY_HIGH",
+      "crypto_period": "Typically 1-3 years key rotation",
+      "post_quantum_migration": {
+        "viable_replacement": "AES-256 stays (quantum-safe), but PQC for key management hierarchy",
+        "timeline_urgency": "HIGH (next 12-18 months)",
+        "implementation_complexity": "MEDIUM - KMS integration needed",
+        "note": "AES-256 is believed quantum-resistant (Grover's algorithm has O(2^128) complexity, still infeasible)"
+      },
+      "risk_analysis": {
+        "harvest_now_risk": "EXTREME - If database backups are captured",
+        "scope": "All encrypted data at rest vulnerable",
+        "data_types_affected": [
+          "Customer PII",
+          "Financial records",
+          "Health information",
+          "Intellectual property"
+        ],
+        "exposure_window": "Backups retained 7-10+ years",
+        "estimated_compromise_value": "Complete database privacy breach"
+      }
+    },
+    {
+      "id": "CA_005",
+      "asset_type": "Authentication Certificates",
+      "locations": [
+        "mTLS for service-to-service auth",
+        "Client certificates",
+        "SCEP/PKIX infrastructure",
+        "Code signing"
+      ],
+      "algorithm": "X.509 with RSA-4096 / ECDSA",
+      "quantum_status": "VULNERABLE",
+      "risk_level": "HIGH",
+      "data_sensitivity": "HIGH",
+      "crypto_period": "Typically 1-5 years",
+      "post_quantum_migration": {
+        "viable_replacement": "Hybrid X.509 certificates with PQC signatures",
+        "timeline_urgency": "MEDIUM (next 18-24 months)",
+        "implementation_complexity": "MEDIUM-HIGH - PKI infrastructure changes",
+        "blockers": [
+          "Root CA certificates need updating",
+          "Intermediate CAs must support hybrid/PQC",
+          "Certificate validation chains must adapt"
+        ]
+      },
+      "risk_analysis": {
+        "harvest_now_risk": "HIGH - Service identity can be forged",
+        "impersonation_risk": "Rogue services could intercept traffic",
+        "supply_chain_risk": "Code signing key compromise = malware distribution",
+        "estimated_compromise_value": "Complete service infrastructure compromise"
+      }
+    },
+    {
+      "id": "CA_006",
+      "asset_type": "Secrets Management Keys",
+      "locations": [
+        "Vault master keys",
+        "Encryption keys in HashiCorp Vault",
+        "Azure Key Vault backing keys",
+        "AWS Secrets Manager encryption"
+      ],
+      "algorithm": "RSA-4096 / Other HSM-stored algorithms",
+      "quantum_status": "VULNERABLE",
+      "risk_level": "CRITICAL",
+      "data_sensitivity": "EXTREMELY_HIGH",
+      "crypto_period": "Typically long-lived",
+      "post_quantum_migration": {
+        "viable_replacement": "PQC key derivation, hybrid encryption",
+        "timeline_urgency": "CRITICAL (next 6-12 months)",
+        "implementation_complexity": "HIGH - Deep infrastructure changes",
+        "blockers": [
+          "HSM firmware updates needed",
+          "Vault backends need PQC support",
+          "Key rotation policies must change"
+        ]
+      },
+      "risk_analysis": {
+        "harvest_now_risk": "CRITICAL - Master key compromise = everything compromised",
+        "cascade_effect": "Compromise of vault key breaks all secrets",
+        "business_impact": "Total security infrastructure failure",
+        "estimated_compromise_value": "Complete organizational compromise"
+      }
+    },
+    {
+      "id": "CA_007",
+      "asset_type": "Legacy Systems (Firmware, IoT)",
+      "locations": [
+        "Network appliances",
+        "Embedded systems",
+        "IoT devices",
+        "Legacy servers"
+      ],
+      "algorithm": "Various (often weak)",
+      "quantum_status": "VULNERABLE_PLUS",
+      "risk_level": "HIGH",
+      "data_sensitivity": "MEDIUM-HIGH",
+      "crypto_period": "Often 5-10+ years",
+      "post_quantum_migration": {
+        "viable_replacement": "Often: END-OF-LIFE replacement necessary",
+        "timeline_urgency": "HIGH (next 12-24 months)",
+        "implementation_complexity": "VERY_HIGH - Often impossible to update",
+        "blockers": [
+          "No vendor PQC support available",
+          "Hardware too old for modern cryptography",
+          "Firmware updates impossible/risky"
+        ]
+      },
+      "risk_analysis": {
+        "harvest_now_risk": "VERY_HIGH - Often already compromised",
+        "supply_chain_risk": "Legacy devices used for initial access",
+        "remediation_challenge": "No patching possible",
+        "estimated_compromise_value": "Network perimeter breach"
+      }
+    }
+  ],
+  "risk_heat_map": {
+    "time_axis": [
+      "NOW (2026)",
+      "NEAR (2027-2028)",
+      "MID (2029-2030)",
+      "FAR (2031+)"
+    ],
+    "risk_categories": [
+      {
+        "category": "HARVEST_NOW_DECRYPT_LATER",
+        "description": "Data captured today will be decrypted by CRQC tomorrow",
+        "current_severity": "CRITICAL",
+        "affected_assets": [
+          "CA_001 (SSH Keys)",
+          "CA_002 (TLS Certificates)",
+          "CA_003 (API Keys)",
+          "CA_004 (Database Keys)",
+          "CA_005 (Auth Certs)"
+        ],
+        "affected_data": [
+          "All historical HTTPS traffic (captured)",
+          "SSH session data",
+          "API conversations",
+          "Database backups"
+        ],
+        "timeline_to_risk": "5-10 years (when CRQC available)"
+      },
+      {
+        "category": "CRYPTO_AGILITY",
+        "description": "Inability to quickly transition to new crypto standards",
+        "current_severity": "HIGH",
+        "affected_assets": [
+          "CA_006 (Secrets Management)",
+          "CA_007 (Legacy Systems)"
+        ],
+        "business_impact": "Forced emergency migration if quantum timeline accelerates",
+        "mitigation": "Start hybrid implementations NOW"
+      },
+      {
+        "category": "SUPPLY_CHAIN_RISK",
+        "description": "Vendors don't support PQC in time",
+        "current_severity": "MEDIUM-HIGH",
+        "affected_vendors": [
+          "OpenSSH (slow adoption)",
+          "Certificate Authorities (mixed support)",
+          "Hardware vendors (HSM firmware)"
+        ],
+        "mitigation": "Engage vendors NOW, plan for EOL replacements"
+      },
+      {
+        "category": "COMPLIANCE_RISK",
+        "description": "Regulations require PQC before organizational readiness",
+        "current_severity": "MEDIUM",
+        "regulatory_drivers": [
+          "European Cyber Security Act (CSA)",
+          "Dutch BIO (Baseline Informatiebeveiliging Overheid)",
+          "NIST SP 800-175 (eventual mandate)"
+        ],
+        "timeline": "2-3 years until first compliance deadlines"
+      }
+    ]
+  },
+  "risk_scores": {
+    "asset_risk_matrix": {
+      "CA_001": {
+        "name": "SSH Keys",
+        "quantum_vulnerability": 95,
+        "harvest_risk": 90,
+        "exposure_window_years": 5,
+        "implementation_complexity": 80,
+        "overall_pqc_risk_score": 89,
+        "migration_priority": "IMMEDIATE"
+      },
+      "CA_002": {
+        "name": "TLS/SSL Certs",
+        "quantum_vulnerability": 95,
+        "harvest_risk": 95,
+        "exposure_window_years": 7,
+        "implementation_complexity": 60,
+        "overall_pqc_risk_score": 88,
+        "migration_priority": "IMMEDIATE"
+      },
+      "CA_003": {
+        "name": "API Keys",
+        "quantum_vulnerability": 75,
+        "harvest_risk": 80,
+        "exposure_window_years": 3,
+        "implementation_complexity": 50,
+        "overall_pqc_risk_score": 71,
+        "migration_priority": "HIGH"
+      },
+      "CA_004": {
+        "name": "DB Encryption Keys",
+        "quantum_vulnerability": 85,
+        "harvest_risk": 95,
+        "exposure_window_years": 10,
+        "implementation_complexity": 70,
+        "overall_pqc_risk_score": 86,
+        "migration_priority": "CRITICAL"
+      },
+      "CA_005": {
+        "name": "Auth Certs",
+        "quantum_vulnerability": 90,
+        "harvest_risk": 85,
+        "exposure_window_years": 5,
+        "implementation_complexity": 65,
+        "overall_pqc_risk_score": 81,
+        "migration_priority": "HIGH"
+      },
+      "CA_006": {
+        "name": "Secrets Mgmt Keys",
+        "quantum_vulnerability": 95,
+        "harvest_risk": 95,
+        "exposure_window_years": 10,
+        "implementation_complexity": 85,
+        "overall_pqc_risk_score": 91,
+        "migration_priority": "CRITICAL"
+      },
+      "CA_007": {
+        "name": "Legacy Systems",
+        "quantum_vulnerability": 100,
+        "harvest_risk": 90,
+        "exposure_window_years": 8,
+        "implementation_complexity": 95,
+        "overall_pqc_risk_score": 96,
+        "migration_priority": "CRITICAL"
+      }
+    }
+  },
+  "migration_roadmap": {
+    "phase_1_discovery": {
+      "timeline": "Weeks 4-8",
+      "tasks": [
+        "Complete crypto asset inventory",
+        "Identify all RSA/ECDSA usage",
+        "Map data flows and dependencies",
+        "Classify data by sensitivity + retention period",
+        "Assess vendor PQC readiness"
+      ],
+      "deliverables": [
+        "Complete asset inventory (this file)",
+        "Risk heat map dashboard",
+        "Quantum-vulnerable asset list"
+      ]
+    },
+    "phase_2_risking": {
+      "timeline": "Weeks 8-10",
+      "tasks": [
+        "Prioritize assets by risk score",
+        "Calculate business impact",
+        "Identify quick wins vs long slog",
+        "Budget planning for transitions",
+        "Vendor engagement strategy"
+      ],
+      "deliverables": [
+        "Executive risk report",
+        "Migration budget proposal",
+        "3-year PQC roadmap"
+      ]
+    },
+    "phase_3_poc": {
+      "timeline": "Weeks 10-18",
+      "tasks": [
+        "Lab environment with ML-KEM library (liboqs)",
+        "Hybrid TLS certificate creation",
+        "OpenSSH with PQC extension testing",
+        "Performance benchmarks",
+        "Interoperability validation"
+      ],
+      "deliverables": [
+        "Working PQC lab setup",
+        "Performance reports",
+        "Hybrid cert generation playbook"
+      ]
+    },
+    "phase_4_hybrid_rollout": {
+      "timeline": "Weeks 18-34",
+      "tasks": [
+        "Deploy hybrid certificates (RSA+ML-KEM)",
+        "Update TLS libraries in applications",
+        "Hybrid API token implementation",
+        "SSH key migration planning",
+        "Continuous testing and validation"
+      ],
+      "deliverables": [
+        "Hybrid crypto deployed",
+        "No breaking changes to clients",
+        "Performance validated in production"
+      ]
+    },
+    "phase_5_native_pqc": {
+      "timeline": "Weeks 34-50",
+      "tasks": [
+        "Phase out classic-only algorithms",
+        "Native PQC SSH key support",
+        "PQC-only TLS certificates",
+        "Legacy system EOL execution"
+      ],
+      "deliverables": [
+        "All new assets use PQC",
+        "Classic crypto phasing out"
+      ]
+    },
+    "phase_6_continuous_compliance": {
+      "timeline": "Ongoing",
+      "tasks": [
+        "Monitor NIST/vendor updates",
+        "Annual PQC readiness audits",
+        "Vendor support tracking",
+        "Key rotation governance",
+        "Incident response for PQC"
+      ],
+      "deliverables": [
+        "PQC compliance dashboard",
+        "Annual audit reports"
+      ]
+    }
+  },
+  "vendor_pqc_status": {
+    "openssl": {
+      "pqc_support": "Partial (OpenSSL 3.0+)",
+      "ml_kem_ready": "FIPS 203 support coming Q2 2026",
+      "ml_dsa_ready": "FIPS 204 support coming Q3 2026",
+      "readiness": "MEDIUM"
+    },
+    "openssh": {
+      "pqc_support": "None yet",
+      "planned": "OpenSSH 9.1+ with RFC 8308 extensions",
+      "status": "In development",
+      "readiness": "LOW - CRITICAL BLOCKER"
+    },
+    "python_cryptography": {
+      "pqc_support": "Via liboqs integration",
+      "ml_kem_ready": "Yes (liboqs-python)",
+      "ml_dsa_ready": "Yes",
+      "readiness": "HIGH"
+    },
+    "golang_crypto": {
+      "pqc_support": "Some PQC available",
+      "ml_kem_ready": "Community libraries (not std)",
+      "readiness": "MEDIUM"
+    },
+    "certificate_authorities": {
+      "hybrid_certs": "Major CAs issuing hybrid certs now",
+      "pqc_native": "Still limited availability",
+      "readiness": "MEDIUM-HIGH"
+    },
+    "kubernetes_etcd": {
+      "pqc_support": "Planning Q4 2026",
+      "status": "Not yet production-ready",
+      "blocker": "Yes"
+    }
+  },
+  "recommendations": {
+    "immediate_actions": [
+      "Start crypto asset inventory NOW (this file)",
+      "Identify TLS termination points for hybrid cert deployment",
+      "Engage SSH vendors about PQC timeline (OpenSSH bottleneck)",
+      "Begin secrets management key rotation planning",
+      "Classify data by harvest-now-risk"
+    ],
+    "near_term_12_months": [
+      "Deploy hybrid TLS certificates (RSA + ML-KEM)",
+      "Update applications to support ML-DSA in JWT tokens",
+      "Create PQC performance benchmarks for your workload",
+      "Update compliance policies to mandate PQC readiness target",
+      "Implement hybrid SSH key generation (alongside ED25519)"
+    ],
+    "medium_term_24_months": [
+      "Native PQC TLS certificates in new deployments",
+      "Phase out classic-only SSH keys from new systems",
+      "Vault/KMS key derivation with PQC elements",
+      "Complete legacy system EOL planning",
+      "Mandatory PQC compliance for third-party integrations"
+    ],
+    "long_term_36_months": [
+      "All new cryptographic material is PQC-ready",
+      "Phase out classic RSA/ECDSA from production",
+      "Complete legacy system replacement",
+      "Audit old encrypted data (consider re-encryption if harvest risk)"
+    ]
+  },
+  "cost_impact": {
+    "phases": [
+      {
+        "phase": "Assessment & Planning",
+        "estimated_cost_pct": "5%",
+        "duration": "8 weeks"
+      },
+      {
+        "phase": "Hybrid Implementation",
+        "estimated_cost_pct": "35%",
+        "duration": "16 weeks",
+        "description": "Certificate renewal, library updates, testing"
+      },
+      {
+        "phase": "PQC Rollout",
+        "estimated_cost_pct": "45%",
+        "duration": "16 weeks",
+        "description": "Large scale deployments, legacy replacements"
+      },
+      {
+        "phase": "Optimization & Legacy Removal",
+        "estimated_cost_pct": "15%",
+        "duration": "16 weeks"
+      }
+    ],
+    "budget_drivers": [
+      "Certificate generation/renewal",
+      "Application updates (dev effort)",
+      "Testing and validation",
+      "Legacy system replacement",
+      "Training and change management"
+    ],
+    "note": "Costs of waiting (emergency migration, compliance fines) dramatically exceed proactive migration"
+  }
+}

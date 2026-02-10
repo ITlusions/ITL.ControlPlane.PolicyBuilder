@@ -1,0 +1,370 @@
+Metadata-Version: 2.4
+Name: itl-policy-builder
+Version: 1.0.0
+Summary: ITL ControlPlane Policy Builder - Fluent DSL for defining governance policies
+Author-email: IT Livetech <platform@itlivetech.nl>
+License: Apache-2.0
+Project-URL: Documentation, https://docs.itlivetech.nl/policy-builder
+Project-URL: Repository, https://github.com/itlivetech/ITL.ControlPanel.PolicyBuilder
+Keywords: itl,controlplane,policy,governance,compliance,azure
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: Apache Software License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Topic :: System :: Systems Administration
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: pydantic>=2.0.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.21; extra == "dev"
+Requires-Dist: pytest-cov>=4.0; extra == "dev"
+Requires-Dist: mypy>=1.0; extra == "dev"
+Requires-Dist: ruff>=0.1; extra == "dev"
+Provides-Extra: yaml
+Requires-Dist: PyYAML>=6.0; extra == "yaml"
+
+# ITL Policy Builder
+
+Fluent DSL for defining governance policies for the ITL ControlPlane platform.
+
+## Features
+
+- **Fluent Builder Pattern** — Intuitive API for constructing policies
+- **ARM-Compatible JSON** — Serialize to Azure Resource Manager format
+- **Rich Condition DSL** — Express complex conditions with field operators
+- **Built-in Templates** — Ready-to-use policies for common scenarios
+- **Policy Evaluator** — Evaluate resources against policies at runtime
+- **Initiative Support** — Group policies into policy sets
+
+## Installation
+
+```bash
+pip install itl-policy-builder
+```
+
+## Quick Start
+
+### Define a Policy
+
+```python
+from itl_policy_builder import PolicyBuilder, Effect, field
+
+# Create a policy that requires resources to be in West Europe
+policy = (
+    PolicyBuilder("require-westeurope")
+    .display_name("Require West Europe Location")
+    .description("Ensures all resources are deployed in West Europe")
+    .category("General")
+    .mode("All")
+    .with_rule(
+        if_=field("location").not_equals("westeurope"),
+        then=Effect.DENY,
+        message="Resources must be deployed in West Europe",
+    )
+    .build()
+)
+
+# Serialize to ARM JSON
+print(policy.to_arm_json())
+```
+
+Output:
+```json
+{
+  "id": "/providers/ITL.Authorization/policyDefinitions/require-westeurope",
+  "name": "require-westeurope",
+  "type": "ITL.Authorization/policyDefinitions",
+  "properties": {
+    "displayName": "Require West Europe Location",
+    "description": "Ensures all resources are deployed in West Europe",
+    "policyType": "Custom",
+    "mode": "All",
+    "metadata": {
+      "category": "General"
+    },
+    "policyRule": {
+      "if": {
+        "field": "location",
+        "notEquals": "westeurope"
+      },
+      "then": {
+        "effect": "Deny",
+        "message": "Resources must be deployed in West Europe"
+      }
+    }
+  }
+}
+```
+
+### Complex Conditions
+
+```python
+from itl_policy_builder import field, all_of, any_of, not_, count
+
+# All of these conditions must be true
+condition = all_of(
+    field("location").in_("westeurope", "northeurope"),
+    field("tags.environment").exists(),
+    not_(field("type").equals("ITL.Core/resourceGroups")),
+)
+
+# At least one of these must be true
+condition = any_of(
+    field("properties.sku").equals("Standard"),
+    field("properties.sku").equals("Premium"),
+)
+
+# Count elements in an array
+condition = count("properties.networkInterfaces").greater_than(0)
+
+# Count with filter
+condition = count("properties.ipConfigurations").where(
+    field("properties.publicIpAddress").exists()
+).equals(0)  # No public IPs allowed
+
+# Combine with operators
+condition = (
+    field("location").not_equals("westeurope") &
+    field("tags.environment").exists()
+)  # Using & for AND
+
+condition = (
+    field("sku").equals("Basic") |
+    field("sku").equals("Standard")
+)  # Using | for OR
+
+condition = ~field("type").equals("ITL.Core/resourceGroups")  # Using ~ for NOT
+```
+
+### Policy with Parameters
+
+```python
+policy = (
+    PolicyBuilder("allowed-locations")
+    .display_name("Allowed Locations")
+    .parameter(
+        "allowedLocations",
+        type="Array",
+        display_name="Allowed Locations",
+        description="List of allowed Azure regions",
+        default=["westeurope", "northeurope"],
+    )
+    .parameter(
+        "effect",
+        type="String",
+        default="Deny",
+        allowed_values=["Deny", "Audit", "Disabled"],
+    )
+    .with_rule(
+        if_=field("location").not_in("[parameters('allowedLocations')]"),
+        then=Effect.DENY,
+    )
+    .build()
+)
+```
+
+### Create Policy Assignments
+
+```python
+from itl_policy_builder import PolicyAssignmentBuilder
+
+assignment = (
+    PolicyAssignmentBuilder("enforce-tags-prod")
+    .policy_definition_id(policy.id)
+    .scope("/subscriptions/sub-prod-001")
+    .display_name("Enforce Tags in Production")
+    .parameter("allowedLocations", ["westeurope"])
+    .exclude_scope("/subscriptions/sub-prod-001/resourceGroups/legacy-rg")
+    .non_compliance_message("This resource violates location policy")
+    .build()
+)
+```
+
+### Create Initiatives (Policy Sets)
+
+```python
+from itl_policy_builder import PolicySetBuilder
+
+initiative = (
+    PolicySetBuilder("security-baseline")
+    .display_name("Security Baseline")
+    .description("Core security policies")
+    .category("Security")
+    .add_group("Tags", "Tagging requirements")
+    .add_group("Network", "Network security")
+    .add_policy(
+        "/providers/ITL.Authorization/policyDefinitions/require-tag-environment",
+        groups=["Tags"],
+    )
+    .add_policy(
+        "/providers/ITL.Authorization/policyDefinitions/require-nsg",
+        groups=["Network"],
+    )
+    .build()
+)
+```
+
+### Use Built-in Templates
+
+```python
+from itl_policy_builder.templates import (
+    get_builtin_policy,
+    list_builtin_policies,
+)
+
+# List available built-in policies
+for name, description in list_builtin_policies():
+    print(f"{name}: {description}")
+
+# Get a built-in policy
+policy = get_builtin_policy(
+    "allowed-locations",
+    locations=["westeurope", "northeurope"],
+)
+
+# Require a specific tag
+policy = get_builtin_policy(
+    "require-tag",
+    tag_name="environment",
+    allowed_values=["dev", "test", "prod"],
+)
+```
+
+### Evaluate Policies at Runtime
+
+```python
+from itl_policy_builder import PolicyEvaluator, PolicyBuilder, field, Effect
+
+# Create evaluator
+evaluator = PolicyEvaluator()
+
+# Register policies
+policy = (
+    PolicyBuilder("require-westeurope")
+    .with_rule(
+        if_=field("location").not_equals("westeurope"),
+        then=Effect.DENY,
+    )
+    .build()
+)
+evaluator.register_policy(policy)
+
+# Register assignment
+from itl_policy_builder import PolicyAssignmentBuilder
+
+assignment = (
+    PolicyAssignmentBuilder("enforce-location")
+    .policy_definition_id(policy.id)
+    .scope("/subscriptions/sub-prod-001")
+    .build()
+)
+evaluator.register_assignment(assignment)
+
+# Evaluate a resource
+resource = {
+    "id": "/subscriptions/sub-prod-001/resourceGroups/rg-1/providers/ITL.Compute/virtualMachines/vm-1",
+    "name": "vm-1",
+    "type": "ITL.Compute/virtualMachines",
+    "location": "eastus",
+    "properties": {},
+}
+
+result = evaluator.evaluate(resource)
+
+if result.denied:
+    print(f"Resource denied: {result.deny_reasons}")
+else:
+    print("Resource compliant")
+
+# Quick deny check for middleware
+should_deny, reasons = evaluator.evaluate_for_deny(resource)
+```
+
+## Policy Effects
+
+| Effect | Description | Blocking |
+|--------|-------------|----------|
+| `Deny` | Block the operation | Yes |
+| `Audit` | Log but don't block | No |
+| `Append` | Add fields to the request | No |
+| `Modify` | Modify existing fields | No |
+| `DeployIfNotExists` | Deploy a resource if it doesn't exist | No |
+| `AuditIfNotExists` | Audit if related resource doesn't exist | No |
+| `Disabled` | Policy is disabled | No |
+| `Remediate` | (ITL) Auto-fix non-compliant resources | No |
+| `Alert` | (ITL) Send alert to monitoring | No |
+
+## Field Operators
+
+| Operator | Description |
+|----------|-------------|
+| `equals(value)` | Field equals value |
+| `not_equals(value)` | Field does not equal value |
+| `in_(*values)` | Field is one of values |
+| `not_in(*values)` | Field is not one of values |
+| `contains(value)` | Field contains substring/element |
+| `not_contains(value)` | Field does not contain |
+| `exists(bool)` | Field exists (or not) |
+| `greater_than(n)` | Field > n |
+| `greater_or_equals(n)` | Field >= n |
+| `less_than(n)` | Field < n |
+| `less_or_equals(n)` | Field <= n |
+| `like(pattern)` | SQL-style LIKE (% wildcard) |
+| `matches(regex)` | Regex match |
+
+## Integration with API Gateway
+
+The PolicyBuilder SDK integrates with the ITL ControlPlane API Gateway for runtime enforcement:
+
+```python
+# In API Gateway middleware
+from itl_policy_builder import get_evaluator
+
+async def policy_middleware(request, resource):
+    evaluator = get_evaluator()
+    
+    should_deny, reasons = evaluator.evaluate_for_deny(resource)
+    if should_deny:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "error": "PolicyViolation",
+                "reasons": reasons,
+            }
+        )
+    
+    return await call_next(request)
+```
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                   ITL Policy Builder SDK                         │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐ │
+│  │   Builder   │  │ Conditions  │  │       Evaluator         │ │
+│  │  - Policy   │  │  - field()  │  │  - evaluate()           │ │
+│  │  - Assignment│  │  - all_of() │  │  - register_policy()    │ │
+│  │  - Initiative│  │  - any_of() │  │  - evaluate_for_deny()  │ │
+│  └─────────────┘  └─────────────┘  └─────────────────────────┘ │
+│                                                                 │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐ │
+│  │   Models    │  │    Enums    │  │       Templates         │ │
+│  │  - Definition│ │  - Effect   │  │  - allowed-locations    │ │
+│  │  - Assignment│ │  - Mode     │  │  - require-tag          │ │
+│  │  - Compliance│ │  - State    │  │  - deny-public-ip       │ │
+│  └─────────────┘  └─────────────┘  └─────────────────────────┘ │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+## License
+
+Apache 2.0 — See [LICENSE](LICENSE)
