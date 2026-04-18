@@ -114,10 +114,13 @@ itl-policy generate --template talos-security --style kyverno
 itl-policy generate --template talos-security --style kyverno --output k8s-policies.yaml
 ```
 
-Generate Azure ARM policies:
+Generate Azure ARM policies (outputs a BIO security initiative):
 ```bash
 itl-policy generate --template talos-security --style azure
-itl-policy generate --template talos-security --style azure --format json --output azure-policies.json
+itl-policy generate --template talos-security --style azure --format json --output azure-bio.json
+
+# Generate PQC transition initiative (Azure ARM format)
+itl-policy generate --template pqc-transition --style azure --format json --output azure-pqc.json
 ```
 
 ### `validate` — Validate Policies
@@ -129,11 +132,12 @@ itl-policy validate [OPTIONS]
 
 **Options:**
 - `--file, -f PATH` — Policy file (YAML/JSON) **[required]**
-- `--target TEXT` — Validation target (kubernetes, itl-api, both; default: kubernetes)
+- `--target TEXT` — Validation target (kubernetes, itl-api, azure, both; default: kubernetes)
 
 **Example:**
 ```bash
 itl-policy validate --file policies.yaml --target kubernetes
+itl-policy validate --file azure-policies.json --target azure
 ```
 
 ### `deploy` — Deploy Policies
@@ -194,6 +198,115 @@ itl-policy init --api-endpoint https://controlplane.example.com \
 
 This creates `~/.itl-policy/config.json` for persistent configuration.
 
+### `explain` — Explain Policies or Azure Governance Concepts
+
+**Usage:**
+```bash
+itl-policy explain [OPTIONS]
+```
+
+**Options:**
+- `--template TEXT` — Template to explain (`cis-azure`, `talos-security`, `pqc-transition`; default: `cis-azure`)
+- `--section TEXT` — Filter by section/category (e.g. `AKS`, `Storage`, `IAM`)
+- `--severity TEXT` — Filter by severity (`High`, `Medium`, `Low`)
+- `--as-json` — Output as JSON instead of human-readable text
+- `--about TEXT` — Explain an Azure governance concept instead of a template:
+  `azure-governance`, `management-group`, `subscription`, `resource-group`,
+  `policy-definition`, `policy-initiative`, `policy-assignment`, `policy-effect`
+
+**Examples:**
+```bash
+# List all CIS Azure policies
+itl-policy explain --template cis-azure
+
+# Show only AKS policies with severity High
+itl-policy explain --template cis-azure --section AKS --severity High
+
+# Explain what a policy initiative is
+itl-policy explain --about policy-initiative
+
+# Explain all Azure governance levels in JSON
+itl-policy explain --about azure-governance --as-json
+```
+
+---
+
+### `inventory` — Inventory Existing Azure Policies
+
+**Usage:**
+```bash
+itl-policy inventory [OPTIONS]
+```
+
+**Options:**
+- `--subscription-id TEXT` — Azure subscription ID (or `AZURE_SUBSCRIPTION_ID`)
+- `--tenant-id TEXT` — Azure tenant ID (or `AZURE_TENANT_ID`)
+- `--azure-auth TEXT` — Auth method (`default`, `cli`, `env`; default: `default`)
+- `--include TEXT` — What to include: `assignments`, `definitions`, `initiatives`, `management-groups` (repeatable, default: all)
+- `--all-subscriptions` — Inventory across all accessible subscriptions
+- `--format TEXT` — Output format (`table`, `json`; default: `table`)
+- `--output, -o PATH` — Write output to file
+
+**Examples:**
+```bash
+# Inventory current subscription (table)
+itl-policy inventory --subscription-id "00000000-0000-0000-0000-000000000000"
+
+# Inventory all subscriptions as JSON
+itl-policy inventory --all-subscriptions --format json -o inventory.json
+
+# Only list assignments and initiatives
+itl-policy inventory --include assignments --include initiatives \
+  --subscription-id "sub-id"
+```
+
+---
+
+### `describe` — Describe a Specific Azure Resource Live
+
+Fetches and displays live Azure data for a specific governance level by name.
+
+**Usage:**
+```bash
+itl-policy describe [OPTIONS] LEVEL NAME
+```
+
+**Arguments:**
+- `LEVEL` — Governance level to describe:
+  `management-group`, `subscription`, `resource-group`,
+  `policy-definition`, `policy-initiative`, `policy-assignment`
+- `NAME` — Name or display name of the resource
+
+**Options:**
+- `--subscription-id TEXT` — Azure subscription ID (or `AZURE_SUBSCRIPTION_ID`)
+- `--tenant-id TEXT` — Azure tenant ID (or `AZURE_TENANT_ID`)
+- `--azure-auth TEXT` — Auth method (`default`, `cli`, `env`; default: `default`)
+- `--format TEXT` — Output format (`table`, `json`; default: `table`)
+
+**Examples:**
+```bash
+# Describe a management group
+itl-policy describe management-group my-root-mg
+
+# Describe a subscription by display name
+itl-policy describe subscription "Production"
+
+# Describe a resource group (subscription required)
+itl-policy describe resource-group rg-networking \
+  --subscription-id "00000000-0000-0000-0000-000000000000"
+
+# Describe a built-in policy definition
+itl-policy describe policy-definition "Require a tag on resources"
+
+# Describe a policy initiative as JSON
+itl-policy describe policy-initiative cis-azure-1-3-0 \
+  --subscription-id "sub-id" --format json
+
+# Describe a policy assignment
+itl-policy describe policy-assignment cis-azure-baseline \
+  --subscription-id "sub-id"
+```
+
 ---
 
 ## Environment Variables
@@ -248,6 +361,45 @@ itl-policy deploy --file policies.yaml --action enforce
 export ITL_API_ENDPOINT=https://prod-controlplane.com/api
 export ITL_API_KEY=sk-prod-key
 itl-policy deploy --file policies.yaml --target itl-api --action enforce
+```
+
+### Workflow: Azure ARM Policies
+
+```bash
+# Step 1: Authenticate with Azure
+az login
+
+# Step 2: Get your subscription ID
+SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+
+# Step 3: Generate Azure ARM initiative
+# talos-security → BIO security baseline initiative (17 policies)
+itl-policy generate --template talos-security --style azure --format json --output azure-bio.json
+
+# pqc-transition → PQC readiness initiative (16 policies)
+itl-policy generate --template pqc-transition --style azure --format json --output azure-pqc.json
+
+# Step 4: Validate first
+itl-policy validate --file azure-bio.json --target azure
+
+# Step 5: Dry-run
+itl-policy deploy --file azure-bio.json --target azure \
+  --subscription-id "$SUBSCRIPTION_ID" \
+  --assignment-scope "/subscriptions/$SUBSCRIPTION_ID" \
+  --action audit \
+  --dry-run
+
+# Step 6: Deploy in audit mode
+itl-policy deploy --file azure-bio.json --target azure \
+  --subscription-id "$SUBSCRIPTION_ID" \
+  --assignment-scope "/subscriptions/$SUBSCRIPTION_ID" \
+  --action audit
+
+# Step 7: Enforce when ready
+itl-policy deploy --file azure-bio.json --target azure \
+  --subscription-id "$SUBSCRIPTION_ID" \
+  --assignment-scope "/subscriptions/$SUBSCRIPTION_ID" \
+  --action enforce
 ```
 
 ---

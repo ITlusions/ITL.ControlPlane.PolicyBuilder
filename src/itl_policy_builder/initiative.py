@@ -246,6 +246,14 @@ class PolicySetBuilder:
         """Build and return ARM-compatible dictionary."""
         return self.build().model_dump(by_alias=True)
 
+    def to_azure_dict(self) -> Dict[str, Any]:
+        """Build and return Azure ARM-compatible dictionary (alias for build_dict)."""
+        return self.build_dict()
+
+    def to_azure_json(self) -> str:
+        """Build and return Azure ARM-compatible JSON (alias for build_json)."""
+        return self.build_json()
+
 
 # ============================================================================
 # Built-in Initiative Templates

@@ -1,0 +1,1556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ITL Policy Builder — Multi-Platform Governance SDK</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:         #0d1117;
+      --bg-surface: #161b22;
+      --bg-card:    #1c2128;
+      --bg-code:    #161b22;
+      --border:     #30363d;
+      --accent:     #2f81f7;
+      --accent-dim: #1a4a8a;
+      --accent-alt: #3fb950;
+      --text-hi:    #e6edf3;
+      --text-md:    #8b949e;
+      --text-lo:    #484f58;
+      --tag-blue:   #1a4a8a;
+      --tag-green:  #0f3d1e;
+      --tag-purple: #2d1b5e;
+      --tag-orange: #5c2e00;
+      --radius:     8px;
+      --radius-lg:  12px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text-hi);
+      line-height: 1.65;
+      font-size: 15px;
+    }
+
+    /* ── Nav ── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(13,17,23,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2rem;
+      height: 56px;
+    }
+    .nav-brand {
+      font-size: 0.9rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      color: var(--text-hi);
+      text-decoration: none;
+    }
+    .nav-brand span { color: var(--accent); }
+    .nav-links { display: flex; gap: 1.5rem; }
+    .nav-links a {
+      font-size: 0.85rem;
+      color: var(--text-md);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+    .nav-links a:hover { color: var(--text-hi); }
+    .nav-badge {
+      background: var(--accent-dim);
+      color: var(--accent);
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 2px 10px;
+      border-radius: 99px;
+      border: 1px solid var(--accent);
+    }
+
+    /* ── Layout ── */
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 2rem;
+    }
+
+    section { padding: 5rem 0; }
+    section + section { border-top: 1px solid var(--border); }
+
+    h1 { font-size: 3rem; font-weight: 700; letter-spacing: -0.03em; line-height: 1.15; }
+    h2 { font-size: 1.75rem; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 1.5rem; }
+    h3 { font-size: 1.15rem; font-weight: 600; margin-bottom: 0.75rem; }
+    h4 { font-size: 0.95rem; font-weight: 600; color: var(--text-md); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; }
+
+    p { color: var(--text-md); }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── Hero ── */
+    #hero {
+      padding: 8rem 0 6rem;
+      text-align: center;
+    }
+    .hero-label {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      border: 1px solid var(--accent-dim);
+      padding: 4px 14px;
+      border-radius: 99px;
+      margin-bottom: 1.75rem;
+    }
+    #hero h1 { margin-bottom: 1.25rem; }
+    #hero h1 em { font-style: normal; color: var(--accent); }
+    .hero-sub {
+      font-size: 1.1rem;
+      color: var(--text-md);
+      max-width: 640px;
+      margin: 0 auto 2.5rem;
+    }
+    .hero-actions { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+    .btn {
+      display: inline-block;
+      padding: 0.6rem 1.4rem;
+      border-radius: var(--radius);
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+      text-decoration: none;
+    }
+    .btn:hover { opacity: 0.88; transform: translateY(-1px); text-decoration: none; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-secondary { background: transparent; color: var(--text-hi); border: 1px solid var(--border); }
+    .hero-code {
+      margin: 3rem auto 0;
+      max-width: 540px;
+      text-align: left;
+    }
+
+    /* ── Install pill ── */
+    .install-bar {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.75rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.5rem 1.1rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--text-hi);
+    }
+    .install-bar .prompt { color: var(--accent-alt); }
+
+    /* ── Feature grid ── */
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+    .feature-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      transition: border-color 0.2s;
+    }
+    .feature-card:hover { border-color: var(--accent); }
+    .feature-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius);
+      background: var(--accent-dim);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 0.9rem;
+    }
+    .feature-icon svg { width: 18px; height: 18px; stroke: var(--accent); fill: none; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+    .feature-card h3 { font-size: 0.95rem; margin-bottom: 0.4rem; }
+    .feature-card p { font-size: 0.85rem; }
+
+    /* ── Platform table ── */
+    .platform-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1rem;
+    }
+    .platform-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.75rem;
+    }
+    .platform-card .badge {
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 2px 10px;
+      border-radius: 99px;
+      margin-bottom: 1rem;
+      display: inline-block;
+    }
+    .badge-azure { background: var(--tag-blue); color: #79c0ff; border: 1px solid #1a4a8a; }
+    .badge-k8s   { background: var(--tag-green); color: #56d364; border: 1px solid #0f3d1e; }
+    .badge-itl   { background: var(--tag-purple); color: #d2a8ff; border: 1px solid #2d1b5e; }
+    .platform-card h3 { font-size: 1.05rem; margin-bottom: 0.3rem; }
+    .platform-card p { font-size: 0.85rem; }
+    .platform-meta { margin-top: 1rem; display: flex; flex-direction: column; gap: 0.35rem; }
+    .platform-meta span { font-size: 0.8rem; color: var(--text-md); }
+    .platform-meta span strong { color: var(--text-hi); font-weight: 500; }
+
+    /* ── Tables ── */
+    .table-wrap { overflow-x: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+    th {
+      text-align: left;
+      padding: 0.65rem 1rem;
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border);
+      color: var(--text-md);
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    td {
+      padding: 0.65rem 1rem;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-hi);
+      vertical-align: top;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--bg-surface); }
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82em;
+      background: var(--bg-code);
+      border: 1px solid var(--border);
+      padding: 1px 6px;
+      border-radius: 4px;
+      color: #e6edf3;
+    }
+
+    /* ── Code blocks ── */
+    pre[class*="language-"] {
+      background: var(--bg-surface) !important;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      font-size: 0.82rem !important;
+      padding: 1.25rem 1.5rem !important;
+      overflow-x: auto;
+      margin: 1rem 0;
+    }
+    .code-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-lo);
+      margin-bottom: 0.4rem;
+    }
+
+    /* ── Tabs ── */
+    .tabs { display: flex; gap: 0.25rem; border-bottom: 1px solid var(--border); margin-bottom: 1rem; }
+    .tab {
+      padding: 0.5rem 1rem;
+      font-size: 0.85rem;
+      cursor: pointer;
+      color: var(--text-md);
+      border-bottom: 2px solid transparent;
+      transition: color 0.15s, border-color 0.15s;
+      user-select: none;
+    }
+    .tab.active { color: var(--text-hi); border-bottom-color: var(--accent); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── Mermaid ── */
+    .mermaid-wrap {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 2rem;
+      overflow-x: auto;
+      margin: 1.5rem 0;
+    }
+    .mermaid { display: flex; justify-content: center; }
+
+    /* ── Principle list ── */
+    .principle-list { display: flex; flex-direction: column; gap: 0.85rem; }
+    .principle {
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1.25rem;
+    }
+    .principle-num {
+      min-width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--accent-dim);
+      color: var(--accent);
+      font-size: 0.8rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .principle p { font-size: 0.88rem; margin: 0; }
+    .principle p strong { color: var(--text-hi); }
+
+    /* ── CLI commands ── */
+    .cli-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 0.75rem;
+    }
+    .cli-item {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.9rem 1.1rem;
+    }
+    .cli-item code { background: transparent; border: none; color: var(--accent); font-size: 0.9rem; font-weight: 500; padding: 0; }
+    .cli-item p { font-size: 0.82rem; margin-top: 0.25rem; }
+
+    /* ── Section split ── */
+    .section-split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3rem;
+      align-items: start;
+    }
+    @media (max-width: 720px) {
+      .section-split { grid-template-columns: 1fr; }
+      h1 { font-size: 2.25rem; }
+      .nav-links { display: none; }
+    }
+
+    /* ── Compliance panels ── */
+    .compliance-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 1rem;
+    }
+    .compliance-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+    }
+    .compliance-panel ul { list-style: none; margin-top: 0.75rem; display: flex; flex-direction: column; gap: 0.35rem; }
+    .compliance-panel ul li {
+      font-size: 0.82rem;
+      color: var(--text-md);
+      padding-left: 1rem;
+      position: relative;
+    }
+    .compliance-panel ul li::before {
+      content: '–';
+      position: absolute;
+      left: 0;
+      color: var(--text-lo);
+    }
+    .compliance-panel ul li code { background: transparent; border: none; color: var(--accent-alt); padding: 0; font-size: 0.8em; }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 2.5rem 0;
+      text-align: center;
+      font-size: 0.82rem;
+      color: var(--text-md);
+    }
+    footer a { color: var(--text-md); }
+    footer a:hover { color: var(--text-hi); }
+
+    /* ── Misc ── */
+    .section-header { margin-bottom: 2.5rem; }
+    .section-header p { margin-top: 0.5rem; font-size: 0.95rem; max-width: 680px; }
+    .divider { border: none; border-top: 1px solid var(--border); margin: 0; }
+    .pill {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 2px 10px;
+      border-radius: 99px;
+    }
+    .pill-blue { background: var(--tag-blue); color: #79c0ff; }
+    .pill-green { background: var(--tag-green); color: #56d364; }
+    .pill-purple { background: var(--tag-purple); color: #d2a8ff; }
+    .pill-orange { background: var(--tag-orange); color: #ffa657; }
+
+    /* ── Stats bar ── */
+    .stats-bar {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 0;
+      margin: 3rem auto 0;
+      max-width: 680px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      background: var(--bg-card);
+      overflow: hidden;
+    }
+    .stat {
+      flex: 1;
+      min-width: 110px;
+      padding: 1rem 0.75rem;
+      text-align: center;
+      border-right: 1px solid var(--border);
+    }
+    .stat:last-child { border-right: none; }
+    .stat-num {
+      display: block;
+      font-size: 1.65rem;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: -0.03em;
+      line-height: 1;
+    }
+    .stat-label {
+      display: block;
+      font-size: 0.72rem;
+      color: var(--text-md);
+      margin-top: 0.3rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    /* ── CIS section ── */
+    .cis-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 0.75rem;
+    }
+    .cis-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+    .cis-card:hover { border-color: var(--accent-dim); }
+    .cis-section-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-lo);
+    }
+    .cis-card h3 { font-size: 0.88rem; font-weight: 600; margin: 0; }
+    .cis-policies-count {
+      font-size: 0.78rem;
+      color: var(--accent);
+      font-weight: 500;
+    }
+    .cis-policy-list {
+      list-style: none;
+      margin-top: 0.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+    .cis-policy-list li {
+      font-size: 0.78rem;
+      color: var(--text-md);
+      padding-left: 0.75rem;
+      position: relative;
+    }
+    .cis-policy-list li::before { content: '›'; position: absolute; left: 0; color: var(--text-lo); }
+    .cis-policy-list li code { background: transparent; border: none; color: var(--text-md); padding: 0; font-size: 0.78rem; }
+  </style>
+</head>
+<body>
+
+<!-- ─── Navigation ─────────────────────────────────── -->
+<nav>
+  <a class="nav-brand" href="#hero">ITL <span>Policy Builder</span></a>
+  <div class="nav-links">
+    <a href="#platforms">Platforms</a>
+    <a href="#quickstart">Quick Start</a>
+    <a href="#compliance">Compliance</a>
+    <a href="#cis">CIS Azure</a>
+    <a href="#kyverno-arch">Kyverno</a>
+    <a href="#cli">CLI</a>
+    <a href="#azure">Azure</a>
+    <a href="#architecture">Architecture</a>
+  </div>
+  <span class="nav-badge">Apache 2.0</span>
+</nav>
+
+<!-- ─── Hero ───────────────────────────────────────── -->
+<section id="hero">
+  <div class="container">
+    <div class="hero-label">Multi-Platform Governance SDK</div>
+    <h1>Define once.<br /><em>Deploy everywhere.</em></h1>
+    <p class="hero-sub">
+      A fluent Python DSL for defining governance policies that compile to native formats
+      for Azure Policy, Kubernetes Kyverno, and the ITL Control Plane — from a single source of truth.
+    </p>
+    <div class="hero-actions">
+      <a href="#quickstart" class="btn btn-primary">Get Started</a>
+      <a href="#platforms" class="btn btn-secondary">View Platforms</a>
+    </div>
+    <div class="hero-code">
+      <div class="install-bar">
+        <span class="prompt">$</span>
+        pip install itl-policy-builder<span style="color:var(--text-md)">[cli,azure]</span>
+      </div>
+    </div>
+    <div class="stats-bar">
+      <div class="stat"><span class="stat-num">3</span><span class="stat-label">Platforms</span></div>
+      <div class="stat"><span class="stat-num">60</span><span class="stat-label">CIS Policies</span></div>
+      <div class="stat"><span class="stat-num">17</span><span class="stat-label">BIO Policies</span></div>
+      <div class="stat"><span class="stat-num">16</span><span class="stat-label">PQC Policies</span></div>
+      <div class="stat"><span class="stat-num">9</span><span class="stat-label">CLI Commands</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── Features ──────────────────────────────────── -->
+<section id="features">
+  <div class="container">
+    <div class="section-header">
+      <h2>What it provides</h2>
+      <p>Every capability you need to build, validate, and enforce governance across cloud and container platforms.</p>
+    </div>
+    <div class="feature-grid">
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        </div>
+        <h3>Fluent Builder Pattern</h3>
+        <p>Intuitive chained API for constructing policies, assignments, and initiatives without boilerplate.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+        </div>
+        <h3>ARM-Compatible Output</h3>
+        <p>Serialise to Azure Resource Manager <code>PolicyDefinition</code> JSON ready for subscription-level deployment.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+        </div>
+        <h3>Kyverno Support</h3>
+        <p>Generate <code>ClusterPolicy</code> YAML for Kubernetes-native admission control on Talos and standard K8s clusters.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        </div>
+        <h3>Rich Condition DSL</h3>
+        <p>Compose conditions with <code>all_of</code>, <code>any_of</code>, <code>not_</code>, <code>count().where()</code>, and operator overloads (<code>&amp;</code>, <code>|</code>, <code>~</code>).</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4"/><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </div>
+        <h3>BIO Compliance</h3>
+        <p>17 built-in policies aligned to the Dutch government Baseline Informatiebeveiliging Overheid (BIO 2.0).</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <h3>PQC Readiness</h3>
+        <p>16 policies to plan and enforce Post-Quantum Cryptography migration aligned to NIST standards (ML-KEM, ML-DSA).</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        </div>
+        <h3>Policy Evaluator</h3>
+        <p>Evaluate resources against registered policies at runtime — integrates directly with API Gateway middleware.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h7"/></svg>
+        </div>
+        <h3>CLI Tool</h3>
+        <p>8 commands for listing, generating, validating, deploying, and describing policies without writing Python.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+        </div>
+        <h3>Initiative Support</h3>
+        <p>Group policies into sets (initiatives), assign them with parameters, and manage compliance state across scopes.</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ─── Platforms ─────────────────────────────────── -->
+<section id="platforms">
+  <div class="container">
+    <div class="section-header">
+      <h2>Multi-Platform Architecture</h2>
+      <p>The same policy definition serialises into the native enforcement format of each target platform.</p>
+    </div>
+
+    <div class="platform-cards">
+      <div class="platform-card">
+        <span class="badge badge-azure">Azure Resource Manager</span>
+        <h3>Azure Policy</h3>
+        <p>Generates <code>PolicyDefinition</code> JSON deployed to subscriptions or management groups via the Azure Policy engine.</p>
+        <div class="platform-meta">
+          <span><strong>Output:</strong> PolicyDefinition JSON</span>
+          <span><strong>Effects:</strong> Deny · Audit · Modify · DeployIfNotExists</span>
+          <span><strong>Scope:</strong> Subscription, Management Group</span>
+        </div>
+      </div>
+      <div class="platform-card">
+        <span class="badge badge-k8s">Kubernetes / Talos</span>
+        <h3>Kyverno Admission Controller</h3>
+        <p>Generates <code>ClusterPolicy</code> YAML enforced by Kyverno's mutating and validating admission webhooks.</p>
+        <div class="platform-meta">
+          <span><strong>Output:</strong> ClusterPolicy YAML</span>
+          <span><strong>Rules:</strong> Validate · Mutate · Generate · Audit</span>
+          <span><strong>Scope:</strong> Namespace, Cluster</span>
+        </div>
+      </div>
+      <div class="platform-card">
+        <span class="badge badge-itl">ITL Control Plane</span>
+        <h3>ITL Resource Provider API</h3>
+        <p>Registers policies via the ITL Control Plane REST API. Supports the <code>Remediate</code> and <code>Alert</code> custom effects.</p>
+        <div class="platform-meta">
+          <span><strong>Output:</strong> ITL Policy JSON</span>
+          <span><strong>Effects:</strong> Deny · Audit · Remediate · Alert</span>
+          <span><strong>Scope:</strong> Tenant, Resource Group</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="mermaid-wrap" style="margin-top:2rem;">
+      <div class="mermaid">
+flowchart LR
+    subgraph Definition["Policy Definition  (Python DSL)"]
+        Builder["PolicyBuilder\nCondition DSL · Parameters · Initiatives"]
+    end
+
+    subgraph Serialisation["Serialisation Layer"]
+        ARM["ARM Serialiser\nPolicyDefinition JSON"]
+        Kyverno["Kyverno Serialiser\nClusterPolicy YAML"]
+        ITL["ITL Serialiser\nITL Policy JSON"]
+    end
+
+    subgraph Targets["Deployment Targets"]
+        Azure["Azure Policy\nSubscription / Management Group"]
+        K8s["Kubernetes Cluster\nKyverno Admission Controller"]
+        ITLCP["ITL Control Plane\nResource Provider API"]
+    end
+
+    Builder --> ARM --> Azure
+    Builder --> Kyverno --> K8s
+    Builder --> ITL --> ITLCP
+      </div>
+    </div>
+
+    <div class="principle-list" style="margin-top:2rem;">
+      <div class="principle">
+        <div class="principle-num">1</div>
+        <p><strong>Single source of truth</strong> — The policy rule is written once in the DSL. Platform-specific serialisers handle all format differences.</p>
+      </div>
+      <div class="principle">
+        <div class="principle-num">2</div>
+        <p><strong>Platform parity</strong> — Core concepts (conditions, effects, parameters, initiatives) map to equivalent constructs on each platform.</p>
+      </div>
+      <div class="principle">
+        <div class="principle-num">3</div>
+        <p><strong>Progressive deployment</strong> — Policies can be deployed in <code>audit</code> mode on all platforms simultaneously before switching to enforcement.</p>
+      </div>
+      <div class="principle">
+        <div class="principle-num">4</div>
+        <p><strong>Composable initiatives</strong> — Multiple policies can be grouped into an initiative and assigned in a single operation, regardless of target platform.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── Quick Start ───────────────────────────────── -->
+<section id="quickstart">
+  <div class="container">
+    <div class="section-header">
+      <h2>Quick Start</h2>
+      <p>From installation to your first deployed policy in under five minutes.</p>
+    </div>
+
+    <div class="tabs" id="tabs-qs">
+      <div class="tab active" data-tab="qs-policy">Define a Policy</div>
+      <div class="tab" data-tab="qs-conditions">Conditions</div>
+      <div class="tab" data-tab="qs-params">Parameters</div>
+      <div class="tab" data-tab="qs-init">Initiatives</div>
+      <div class="tab" data-tab="qs-eval">Evaluate</div>
+    </div>
+
+    <div class="tab-panel active" id="qs-policy">
+      <div class="code-label">Python</div>
+      <pre><code class="language-python">from itl_policy_builder import PolicyBuilder, Effect, field
+
+policy = (
+    PolicyBuilder("require-westeurope")
+    .display_name("Require West Europe Location")
+    .description("Ensures all resources are deployed in West Europe")
+    .category("General")
+    .mode("All")
+    .with_rule(
+        if_=field("location").not_equals("westeurope"),
+        then=Effect.DENY,
+        message="Resources must be deployed in West Europe",
+    )
+    .build()
+)
+
+# Serialise to ARM JSON
+print(policy.to_arm_json())</code></pre>
+    </div>
+
+    <div class="tab-panel" id="qs-conditions">
+      <div class="code-label">Python</div>
+      <pre><code class="language-python">from itl_policy_builder import field, all_of, any_of, not_, count
+
+# Combine multiple conditions
+condition = all_of(
+    field("location").in_("westeurope", "northeurope"),
+    field("tags.environment").exists(),
+    not_(field("type").equals("ITL.Core/resourceGroups")),
+)
+
+# Count-based conditions
+condition = count("properties.ipConfigurations").where(
+    field("properties.publicIpAddress").exists()
+).equals(0)   # No public IPs allowed
+
+# Operator overloads
+condition = (
+    field("location").not_equals("westeurope") &
+    field("tags.environment").exists()          # AND
+)
+
+condition = field("sku").equals("Basic") | field("sku").equals("Standard")  # OR
+condition = ~field("type").equals("ITL.Core/resourceGroups")                # NOT</code></pre>
+    </div>
+
+    <div class="tab-panel" id="qs-params">
+      <div class="code-label">Python</div>
+      <pre><code class="language-python">from itl_policy_builder import PolicyBuilder, PolicyAssignmentBuilder, Effect, field
+
+# Policy with parameters
+policy = (
+    PolicyBuilder("allowed-locations")
+    .display_name("Allowed Locations")
+    .parameter(
+        "allowedLocations",
+        type="Array",
+        display_name="Allowed Locations",
+        description="List of allowed Azure regions",
+        default=["westeurope", "northeurope"],
+    )
+    .parameter(
+        "effect",
+        type="String",
+        default="Deny",
+        allowed_values=["Deny", "Audit", "Disabled"],
+    )
+    .with_rule(
+        if_=field("location").not_in("[parameters('allowedLocations')]"),
+        then=Effect.DENY,
+    )
+    .build()
+)
+
+# Policy assignment — override parameters at assignment time
+assignment = (
+    PolicyAssignmentBuilder("enforce-locations-prod")
+    .policy_definition_id(policy.id)
+    .scope("/subscriptions/sub-prod-001")
+    .display_name("Enforce Locations in Production")
+    .parameter("allowedLocations", ["westeurope"])         # narrow scope in prod
+    .exclude_scope("/subscriptions/sub-prod-001/resourceGroups/legacy-rg")
+    .non_compliance_message("This resource violates the location policy")
+    .build()
+)</code></pre>
+    </div>
+
+    <div class="tab-panel" id="qs-init">
+      <div class="code-label">Python</div>
+      <pre><code class="language-python">from itl_policy_builder import PolicySetBuilder
+
+initiative = (
+    PolicySetBuilder("security-baseline")
+    .display_name("Security Baseline")
+    .description("Core security policies")
+    .category("Security")
+    .version("1.0.0")
+    .add_group("Tags", "Tagging requirements")
+    .add_group("Network", "Network security")
+    .add_policy(
+        "/providers/ITL.Authorization/policyDefinitions/require-tag-environment",
+        groups=["Tags"],
+    )
+    .add_policy(
+        "/providers/ITL.Authorization/policyDefinitions/deny-public-ip",
+        groups=["Network"],
+    )
+    .build()
+)</code></pre>
+    </div>
+
+    <div class="tab-panel" id="qs-eval">
+      <div class="code-label">Python</div>
+      <pre><code class="language-python">from itl_policy_builder import PolicyEvaluator, PolicyBuilder, field, Effect
+
+evaluator = PolicyEvaluator()
+evaluator.register_policy(policy)
+evaluator.register_assignment(assignment)
+
+resource = {
+    "id": "/subscriptions/sub-001/resourceGroups/rg-1/providers/ITL.Compute/virtualMachines/vm-1",
+    "name": "vm-1",
+    "type": "ITL.Compute/virtualMachines",
+    "location": "eastus",
+}
+
+result = evaluator.evaluate(resource)
+
+if result.denied:
+    print(f"Resource denied: {result.deny_reasons}")
+else:
+    print("Resource compliant")
+
+# API Gateway middleware integration
+should_deny, reasons = evaluator.evaluate_for_deny(resource)</code></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ─── Compliance ────────────────────────────────── -->
+<section id="compliance">
+  <div class="container">
+    <div class="section-header">
+      <h2>Built-in Compliance Templates</h2>
+      <p>Ready-to-use policy bundles aligned to established frameworks, deployable to all supported platforms.</p>
+    </div>
+
+    <div class="compliance-grid">
+
+      <div class="compliance-panel">
+        <span class="pill pill-blue" style="margin-bottom:1rem;">BIO — Dutch Government</span>
+        <h3>Baseline Informatiebeveiliging Overheid</h3>
+        <p style="font-size:0.83rem;margin-top:0.4rem;">17 policies across 5 control categories aligned to the BIO 2.0 standard for Dutch government information security.</p>
+        <ul>
+          <li><code>bio-require-data-classification</code> — Verplicht dataclassificatie tag (BIV)</li>
+          <li><code>bio-deny-anonymous-access</code> — Verbied publieke toegang</li>
+          <li><code>bio-require-encryption-at-rest</code> — Verplicht versleuteling</li>
+          <li><code>bio-require-encryption-in-transit</code> — Verplicht TLS 1.2+</li>
+          <li><code>bio-require-diagnostic-logs</code> — Diagnostische logging</li>
+          <li><code>bio-deny-rdp-ssh-internet</code> — Geen RDP/SSH naar internet</li>
+          <li><code>bio-allowed-locations-nl</code> — Alleen NL/EU datacenters</li>
+        </ul>
+        <div style="margin-top:1rem;">
+          <div class="code-label">Python</div>
+          <pre><code class="language-python">from itl_policy_builder import get_bio_initiative
+initiative = get_bio_initiative()  # All 17 policies</code></pre>
+        </div>
+      </div>
+
+      <div class="compliance-panel">
+        <span class="pill pill-purple" style="margin-bottom:1rem;">PQC — Post-Quantum Cryptography</span>
+        <h3>NIST PQC Migration Framework</h3>
+        <p style="font-size:0.83rem;margin-top:0.4rem;">16 policies for planning and enforcing migration to quantum-safe cryptography (ML-KEM, ML-DSA) aligned to NIST standards.</p>
+        <ul>
+          <li><code>pqc-require-kem</code> — Vereist ML-KEM key exchange</li>
+          <li><code>pqc-require-signature</code> — Vereist ML-DSA/SLH-DSA</li>
+          <li><code>pqc-deny-deprecated</code> — Verbied RSA, ECDSA, Ed25519</li>
+          <li><code>pqc-require-hybrid</code> — Hybrid mode (transitieperiode)</li>
+          <li><code>pqc-require-tls13</code> — TLS 1.3 vereist voor PQC KeyShare</li>
+          <li><code>pqc-short-cert-validity</code> — Max 13 maanden geldigheid</li>
+          <li><code>pqc-audit-classical</code> — Audit quantum-kwetsbare crypto</li>
+        </ul>
+        <div style="margin-top:1rem;">
+          <div class="code-label">Python</div>
+          <pre><code class="language-python">from itl_policy_builder import get_pqc_initiative, get_pqc_transition_initiative
+initiative   = get_pqc_initiative()             # All 16 policies
+transition   = get_pqc_transition_initiative()  # Audit-only (planning phase)</code></pre>
+        </div>
+      </div>
+
+      <div class="compliance-panel">
+        <span class="pill pill-green" style="margin-bottom:1rem;">Kyverno — Kubernetes</span>
+        <h3>Talos Security Bundle</h3>
+        <p style="font-size:0.83rem;margin-top:0.4rem;">13 Kyverno <code>ClusterPolicy</code> templates covering pod security, image controls, network isolation, and PQC readiness for Talos clusters.</p>
+        <ul>
+          <li><code>pod-security-baseline</code> — PSS baseline (non-root, securityContext)</li>
+          <li><code>disallow-privileged</code> — Prevent privileged containers</li>
+          <li><code>require-resource-limits</code> — CPU/memory requests &amp; limits</li>
+          <li><code>disallow-latest-tag</code> — Prevent <code>image:latest</code></li>
+          <li><code>require-image-registry</code> — Whitelist approved registries</li>
+          <li><code>pqc-cryptography-readiness</code> — Label workloads for PQC transition</li>
+          <li><code>talos-security-hardening</code> — Talos-specific settings</li>
+        </ul>
+        <div style="margin-top:1rem;">
+          <div class="code-label">Python</div>
+          <pre><code class="language-python">from itl_policy_builder.templates.kyverno import get_talos_security_bundle
+for policy in get_talos_security_bundle():
+    print(policy.to_yaml())</code></pre>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Policy Effects -->
+    <div style="margin-top:3rem;">
+      <h3 style="margin-bottom:1rem;">Policy Effects</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Effect</th><th>Blocking</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>Deny</code></td><td><span class="pill pill-orange">Yes</span></td><td>Block the operation immediately</td></tr>
+            <tr><td><code>Audit</code></td><td><span class="pill pill-green">No</span></td><td>Log violation without blocking</td></tr>
+            <tr><td><code>Append</code></td><td><span class="pill pill-green">No</span></td><td>Add fields to the request payload</td></tr>
+            <tr><td><code>Modify</code></td><td><span class="pill pill-green">No</span></td><td>Modify existing field values</td></tr>
+            <tr><td><code>DeployIfNotExists</code></td><td><span class="pill pill-green">No</span></td><td>Deploy a related resource if missing</td></tr>
+            <tr><td><code>Remediate</code> <span class="pill pill-purple">ITL</span></td><td><span class="pill pill-green">No</span></td><td>Automatically fix non-compliant resources</td></tr>
+            <tr><td><code>Alert</code> <span class="pill pill-purple">ITL</span></td><td><span class="pill pill-green">No</span></td><td>Send alert to monitoring system</td></tr>
+            <tr><td><code>Disabled</code></td><td><span class="pill pill-green">No</span></td><td>Policy is inactive</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── CIS Azure ───────────────────────────────────── -->
+<section id="cis">
+  <div class="container">
+    <div class="section-header">
+      <h2>CIS Azure Foundations Benchmark</h2>
+      <p>60 policies aligned to CIS Microsoft Azure Foundations Benchmark v3.0.0 (2024) — the industry standard baseline for securing Azure subscriptions, across 16 control sections.</p>
+    </div>
+
+    <div class="cis-grid">
+
+      <div class="cis-card">
+        <span class="cis-section-label">Section 1</span>
+        <h3>Identity &amp; Access Management</h3>
+        <span class="cis-policies-count">3 policies</span>
+        <ul class="cis-policy-list">
+          <li><code>require-security-contact-email</code></li>
+          <li><code>deny-guest-user-owner-role</code></li>
+          <li><code>require-mfa-tag</code></li>
+        </ul>
+      </div>
+
+      <div class="cis-card">
+        <span class="cis-section-label">Section 2</span>
+        <h3>Microsoft Defender for Cloud</h3>
+        <span class="cis-policies-count">2 policies</span>
+        <ul class="cis-policy-list">
+          <li><code>require-defender-for-servers</code></li>
+          <li><code>require-defender-tag</code></li>
+        </ul>
+      </div>
+
+      <div class="cis-card">
+        <span class="cis-section-label">Section 3</span>
+        <h3>Storage Accounts</h3>
+        <span class="cis-policies-count">4 policies</span>
+        <ul class="cis-policy-list">
+          <li><code>require-storage-secure-transfer</code></li>
+          <li><code>deny-storage-public-blob-access</code></li>
+          <li><code>require-storage-min-tls</code></li>
+          <li><code>require-storage-network-default-deny</code></li>
+        </ul>
+      </div>
+
+      <div class="cis-card">
+        <span class="cis-section-label">Section 4</span>
+        <h3>Database Services</h3>
+        <span class="cis-policies-count">4 policies</span>
+        <ul class="cis-policy-list">
+          <li><code>require-sql-auditing</code></li>
+          <li><code>require-sql-tde</code></li>
+          <li><code>require-sql-min-tls</code></li>
+          <li><code>require-sql-public-access-disabled</code></li>
+        </ul>
+      </div>
+
+      <div class="cis-card">
+        <span class="cis-section-label">Section 5</span>
+        <h3>Logging &amp; Monitoring</h3>
+        <span class="cis-policies-count">3 policies</span>
+        <ul class="cis-policy-list">
+          <li><code>require-activity-log-retention</code></li>
+          <li><code>require-diagnostic-settings</code></li>
+          <li><code>deny-public-storage-for-logs</code></li>
+        </ul>
+      </div>
+
+      <div class="cis-card">
+        <span class="cis-section-label">Section 6</span>
+        <h3>Networking</h3>
+        <span class="cis-policies-count">4 policies</span>
+        <ul class="cis-policy-list">
+          <li><code>deny-rdp-from-internet</code></li>
+          <li><code>deny-ssh-from-internet</code></li>
+          <li><code>require-nsg-on-subnets</code></li>
+          <li><code>require-nsg-flow-logs</code></li>
+        </ul>
+      </div>
+
+      <div class="cis-card">
+        <span class="cis-section-label">Section 7</span>
+        <h3>Virtual Machines</h3>
+        <span class="cis-policies-count">3 policies</span>
+        <ul class="cis-policy-list">
+          <li><code>require-vm-disk-encryption</code></li>
+          <li><code>require-vm-data-disk-encryption</code></li>
+          <li><code>require-trusted-launch</code></li>
+        </ul>
+      </div>
+
+      <div class="cis-card">
+        <span class="cis-section-label">Section 8</span>
+        <h3>Key Vault</h3>
+        <span class="cis-policies-count">5 policies</span>
+        <ul class="cis-policy-list">
+          <li><code>require-key-expiry</code></li>
+          <li><code>require-secret-expiry</code></li>
+          <li><code>require-key-vault-recoverable</code></li>
+          <li><code>require-key-vault-firewall</code></li>
+          <li><code>require-key-vault-rbac</code></li>
+        </ul>
+      </div>
+
+      <div class="cis-card">
+        <span class="cis-section-label">Section 9</span>
+        <h3>App Service</h3>
+        <span class="cis-policies-count">7 policies</span>
+        <ul class="cis-policy-list">
+          <li><code>require-app-service-auth</code></li>
+          <li><code>require-https-only</code></li>
+          <li><code>require-latest-tls</code></li>
+          <li><code>require-managed-identity</code></li>
+          <li><code>require-latest-http-version</code></li>
+          <li><code>require-ftps-only</code></li>
+          <li><code>require-key-vault-for-app-secrets</code></li>
+        </ul>
+      </div>
+
+      <div class="cis-card">
+        <span class="cis-section-label">AKS</span>
+        <h3>Azure Kubernetes Service</h3>
+        <span class="cis-policies-count">6 policies</span>
+        <ul class="cis-policy-list">
+          <li><code>require-aks-rbac</code></li>
+          <li><code>require-aks-authorized-ip-ranges</code></li>
+          <li><code>require-aks-private-cluster</code></li>
+          <li><code>require-aks-defender</code></li>
+          <li><code>deny-aks-privileged-containers</code></li>
+          <li><code>require-aks-network-policy</code></li>
+        </ul>
+      </div>
+
+      <div class="cis-card">
+        <span class="cis-section-label">ACR</span>
+        <h3>Container Registry</h3>
+        <span class="cis-policies-count">3 policies</span>
+        <ul class="cis-policy-list">
+          <li><code>deny-acr-admin-user</code></li>
+          <li><code>require-acr-private-endpoint</code></li>
+          <li><code>require-acr-image-scan</code></li>
+        </ul>
+      </div>
+
+      <div class="cis-card">
+        <span class="cis-section-label">WAF</span>
+        <h3>Application Gateway &amp; WAF</h3>
+        <span class="cis-policies-count">3 policies</span>
+        <ul class="cis-policy-list">
+          <li><code>require-waf-on-app-gateway</code></li>
+          <li><code>require-waf-prevention-mode</code></li>
+          <li><code>require-waf-policy-link</code></li>
+        </ul>
+      </div>
+
+      <div class="cis-card">
+        <span class="cis-section-label">Backup</span>
+        <h3>Backup &amp; Recovery</h3>
+        <span class="cis-policies-count">3 policies</span>
+        <ul class="cis-policy-list">
+          <li><code>require-backup-soft-delete</code></li>
+          <li><code>require-vm-backup</code></li>
+          <li><code>require-backup-immutability</code></li>
+        </ul>
+      </div>
+
+      <div class="cis-card">
+        <span class="cis-section-label">Log Analytics</span>
+        <h3>Log Analytics</h3>
+        <span class="cis-policies-count">3 policies</span>
+        <ul class="cis-policy-list">
+          <li><code>require-log-analytics-retention</code></li>
+          <li><code>deny-log-analytics-public-access</code></li>
+          <li><code>require-log-analytics-cmk</code></li>
+        </ul>
+      </div>
+
+      <div class="cis-card">
+        <span class="cis-section-label">CosmosDB</span>
+        <h3>Cosmos DB</h3>
+        <span class="cis-policies-count">3 policies</span>
+        <ul class="cis-policy-list">
+          <li><code>require-cosmos-firewall</code></li>
+          <li><code>deny-cosmos-public-network</code></li>
+          <li><code>require-cosmos-cmk</code></li>
+        </ul>
+      </div>
+
+      <div class="cis-card">
+        <span class="cis-section-label">Governance</span>
+        <h3>Governance &amp; Tagging</h3>
+        <span class="cis-policies-count">4 policies</span>
+        <ul class="cis-policy-list">
+          <li><code>require-environment-tag</code></li>
+          <li><code>require-cost-center-tag</code></li>
+          <li><code>require-owner-tag</code></li>
+          <li><code>require-allowed-locations</code></li>
+        </ul>
+      </div>
+
+    </div>
+
+    <div style="margin-top:2rem;">
+      <div class="code-label">Python — deploy all 60 CIS policies as an initiative</div>
+      <pre><code class="language-python">from itl_policy_builder.templates.cis_azure import get_cis_initiative
+
+# Build the full CIS initiative (60 policies, 16 sections)
+initiative = get_cis_initiative()
+
+# Or build a scoped subset
+from itl_policy_builder.templates.cis_azure import get_cis_section_initiative
+iam_initiative = get_cis_section_initiative("CIS-1")  # IAM only
+aks_initiative = get_cis_section_initiative("AKS")    # AKS only</code></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ─── Kyverno Architecture ──────────────────────── -->
+<section id="kyverno-arch">
+  <div class="container">
+    <div class="section-header">
+      <h2>Kyverno Architecture</h2>
+      <p>How ITL Policy Builder integrates with Kyverno to enforce policies inside a Talos Kubernetes cluster at admission time.</p>
+    </div>
+
+    <div class="mermaid-wrap">
+      <div class="mermaid">
+flowchart TD
+    PB["ITL Policy Builder"]
+
+    subgraph Cluster["Talos Kubernetes Cluster"]
+        subgraph Kyverno["Kyverno Admission Controller"]
+            Webhook["Mutating + Validating Webhook"]
+        end
+
+        subgraph Policies["Active ClusterPolicies"]
+            P1["pod-security-baseline"]
+            P2["require-resource-limits"]
+            P3["disallow-latest-tag"]
+            P4["talos-security-hardening"]
+        end
+
+        Resource["Pod / Deployment Creation"]
+        Validate["Validate — block non-compliant resources"]
+        Mutate["Mutate — transform resource definitions"]
+        Audit["Audit — log policy violations"]
+
+        Resource -->|intercepted by| Webhook
+        Policies -->|enforced by| Webhook
+        Webhook --> Validate
+        Webhook --> Mutate
+        Webhook --> Audit
+    end
+
+    PB -->|generates| Policies
+      </div>
+    </div>
+
+    <div class="section-split" style="margin-top:2rem;">
+      <div>
+        <h3>Generate &amp; Deploy to Talos</h3>
+        <pre><code class="language-python">from itl_policy_builder.templates.kyverno import get_talos_security_bundle
+from itl_policy_builder.deploy import PolicyDeployer, DeployConfig, DeployTarget
+
+# Get all Talos security policies
+policies = get_talos_security_bundle()
+
+# Deploy to the cluster
+config = DeployConfig(
+    target=DeployTarget.KUBERNETES,
+    kube_context="talos-prod",
+    action="audit",
+)
+deployer = PolicyDeployer(configs=[config])
+results = asyncio.run(deployer.deploy(
+    [p.to_yaml() for p in policies]
+))</code></pre>
+      </div>
+      <div>
+        <h3>Available Kyverno Builders</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Builder</th><th>Purpose</th></tr></thead>
+            <tbody>
+              <tr><td><code>KyvernoPolicyBuilder</code></td><td>Generic ClusterPolicy with validate/mutate rules</td></tr>
+              <tr><td><code>KyvernoPodSecurityBuilder</code></td><td>Pod Security Standards enforcement</td></tr>
+              <tr><td><code>KyvernoImageSecurityBuilder</code></td><td>Registry whitelist &amp; tag enforcement</td></tr>
+              <tr><td><code>KyvernoNetworkPolicyBuilder</code></td><td>Namespace-level network isolation</td></tr>
+              <tr><td><code>KyvernoPQCBuilder</code></td><td>Label workloads for PQC readiness tracking</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── CLI ───────────────────────────────────────── -->
+<section id="cli">
+  <div class="container">
+    <div class="section-header">
+      <h2>Command-Line Interface</h2>
+      <p>Manage the full policy lifecycle without writing Python. Install with the <code>[cli]</code> extra.</p>
+    </div>
+
+    <div class="cli-grid" style="margin-bottom:2rem;">
+      <div class="cli-item"><code>list</code><p>List available policy templates by category</p></div>
+      <div class="cli-item"><code>generate</code><p>Generate policies in Kyverno or Azure ARM format</p></div>
+      <div class="cli-item"><code>validate</code><p>Validate policy files before deployment</p></div>
+      <div class="cli-item"><code>deploy</code><p>Deploy to Kubernetes, Azure, or ITL Control Plane</p></div>
+      <div class="cli-item"><code>init</code><p>Initialise the CLI configuration file</p></div>
+      <div class="cli-item"><code>explain</code><p>Explain templates or Azure governance concepts (<code>--about</code>)</p></div>
+      <div class="cli-item"><code>inventory</code><p>Inventory assignments and definitions across subscriptions</p></div>
+      <div class="cli-item"><code>describe</code><p>Fetch live Azure details for a specific governance resource</p></div>
+      <div class="cli-item"><code>publish</code><p>Publish a policy bundle to ITL catalog, OCI registry, or Git repository</p></div>
+    </div>
+
+    <div class="tabs" id="tabs-cli">
+      <div class="tab active" data-tab="cli-gen">Generate</div>
+      <div class="tab" data-tab="cli-deploy">Deploy</div>
+      <div class="tab" data-tab="cli-inv">Inventory</div>
+      <div class="tab" data-tab="cli-explain">Explain</div>
+      <div class="tab" data-tab="cli-publish">Publish</div>
+    </div>
+
+    <div class="tab-panel active" id="cli-gen">
+      <pre><code class="language-bash"># List templates
+itl-policy list --category talos
+
+# Generate Kyverno policies (Kubernetes)
+itl-policy generate --template talos-security --style kyverno --output k8s.yaml
+
+# Generate Azure ARM policies
+itl-policy generate --template talos-security --style azure --format json --output azure.json
+
+# Generate PQC transition initiative
+itl-policy generate --template pqc-transition --style azure --format json --output pqc.json</code></pre>
+    </div>
+
+    <div class="tab-panel" id="cli-deploy">
+      <pre><code class="language-bash"># Deploy to Kubernetes (audit mode)
+itl-policy deploy --file k8s.yaml --target kubernetes --action audit
+
+# Deploy to Azure (enforce mode)
+itl-policy deploy --file azure.json --target azure \
+  --subscription-id "00000000-0000-0000-0000-000000000000" \
+  --assignment-scope "/subscriptions/00000000-0000-0000-0000-000000000000" \
+  --action enforce
+
+# Deploy with Azure CLI authentication
+itl-policy deploy --file azure.json --target azure \
+  --subscription-id "&lt;sub-id&gt;" \
+  --assignment-scope "/subscriptions/&lt;sub-id&gt;" \
+  --azure-auth cli</code></pre>
+    </div>
+
+    <div class="tab-panel" id="cli-inv">
+      <pre><code class="language-bash"># Inventory all policies in a subscription
+itl-policy inventory --subscription-id "&lt;sub-id&gt;"
+
+# Inventory across all accessible subscriptions
+itl-policy inventory --all-subscriptions --format table
+
+# Export inventory to JSON
+itl-policy inventory --subscription-id "&lt;sub-id&gt;" \
+  --include assignments --include definitions \
+  --format json --output inventory.json</code></pre>
+    </div>
+
+    <div class="tab-panel" id="cli-explain">
+      <pre><code class="language-bash"># Explain what policies a template contains
+itl-policy explain --template cis-azure --section AKS
+
+# Explain Azure governance concepts
+itl-policy explain --about management-group
+itl-policy explain --about policy-definition
+itl-policy explain --about policy-assignment
+
+# Describe a live Azure resource
+itl-policy describe subscription "Production" --format json
+itl-policy describe policy-assignment cis-azure-baseline \
+  --subscription-id "&lt;sub-id&gt;"</code></pre>
+    </div>
+
+    <div class="tab-panel" id="cli-publish">
+      <pre><code class="language-bash"># Publish a bundle to the ITL Control Plane policy catalog
+itl-policy publish -f azure.json --name cis-azure-baseline --version 2.0.0
+
+# Dry-run to preview what would be published
+itl-policy publish -f azure.json --name cis-azure-baseline --version 2.0.0 --dry-run
+
+# Add extra tags to a bundle
+itl-policy publish -f azure.json --name cis-azure-baseline --version 2.0.0 \
+  --tag cis --tag azure --tag production
+
+# Publish to an OCI artifact registry (e.g. GHCR)
+itl-policy publish -f k8s.yaml --registry oci \
+  --oci-registry ghcr.io/itlusions \
+  --name kyverno-talos-security --version 1.2.0
+
+# Publish to a Git repository (policies-as-code)
+itl-policy publish -f azure.json --registry git \
+  --git-repo https://github.com/org/policy-store.git \
+  --git-branch main --git-path policies \
+  --name cis-azure-baseline --version 2.0.0</code></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ─── Azure Deployment ──────────────────────────── -->
+<section id="azure">
+  <div class="container">
+    <div class="section-header">
+      <h2>Azure Deployment</h2>
+      <p>Deploy ARM-compatible policies directly to Azure subscriptions and management groups using the native Azure SDK.</p>
+    </div>
+
+    <div class="section-split">
+      <div>
+        <h3>Python SDK</h3>
+        <pre><code class="language-python">import asyncio
+from itl_policy_builder.deploy import (
+    PolicyDeployer, DeployConfig,
+    DeployTarget, DeployAction,
+)
+
+config = DeployConfig(
+    target=DeployTarget.AZURE,
+    azure_subscription_id="00000000-...",
+    azure_assignment_scope="/subscriptions/00000000-...",
+    azure_credential="default",
+    action=DeployAction.ENFORCE,
+    dry_run=False,
+)
+
+deployer = PolicyDeployer(configs=[config])
+results = asyncio.run(deployer.deploy([policy.to_arm_dict()]))
+for r in results:
+    print(r.summary)</code></pre>
+      </div>
+      <div>
+        <h3>Authentication Methods</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Method</th><th>Flag</th></tr></thead>
+            <tbody>
+              <tr><td>DefaultAzureCredential</td><td><code>--azure-auth default</code></td></tr>
+              <tr><td>Azure CLI (<code>az login</code>)</td><td><code>--azure-auth cli</code></td></tr>
+              <tr><td>Service Principal (env vars)</td><td><code>--azure-auth env</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p style="font-size:0.82rem;margin-top:0.75rem;">Service Principal requires <code>AZURE_CLIENT_ID</code>, <code>AZURE_CLIENT_SECRET</code>, and <code>AZURE_TENANT_ID</code>.</p>
+
+        <h3 style="margin-top:2rem;">Install Azure dependencies</h3>
+        <pre><code class="language-bash">pip install itl-policy-builder[azure]</code></pre>
+
+        <h3 style="margin-top:1.5rem;">Deploy modes</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Mode</th><th>Behaviour</th></tr></thead>
+            <tbody>
+              <tr><td><code>audit</code></td><td>Log violations, no blocking (default)</td></tr>
+              <tr><td><code>enforce</code></td><td>Block non-compliant resources</td></tr>
+              <tr><td><code>dry-run</code></td><td>Simulate without making changes</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── Architecture ─────────────────────────────── -->
+<section id="architecture">
+  <div class="container">
+    <div class="section-header">
+      <h2>SDK Architecture</h2>
+      <p>Modular design — install only the components you need. The core SDK has no cloud dependencies.</p>
+    </div>
+
+    <div class="mermaid-wrap">
+      <div class="mermaid">
+flowchart TD
+    subgraph SDK["ITL Policy Builder SDK"]
+        direction TB
+
+        subgraph Core["Core Modules"]
+            Builder["Builder\nPolicy · Assignment · Initiative"]
+            Conditions["Conditions\nfield · all_of · any_of · count"]
+            Evaluator["Evaluator\nevaluate · register_policy · evaluate_for_deny"]
+        end
+
+        subgraph Data["Data Layer"]
+            Models["Models\nDefinition · Assignment · Compliance"]
+            Enums["Enums\nEffect · Mode · State"]
+            Templates["Templates\nBIO · PQC · Kyverno · CIS"]
+        end
+
+        subgraph Ext["Extensions  (optional)"]
+            KyvernoBuilder["Kyverno Builder\nPolicies · Validation · Mutation Rules"]
+            DeploymentModule["Deployment Module\nPolicyDeployer · KubernetesTarget · ITLAPITarget · AzureTarget"]
+        end
+
+        subgraph CLI["CLI Tool  —  pip install itl-policy-builder[cli]"]
+            CLICommands["list · generate · validate · deploy · init · explain · inventory · describe · publish"]
+        end
+    end
+
+    Core --> Ext
+    Core --> CLI
+    Data --> Ext
+    Data --> CLI
+    Ext --> CLI
+      </div>
+    </div>
+
+    <div style="margin-top:2rem;">
+      <h3 style="margin-bottom:1rem;">Field Operators</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Operator</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>equals(value)</code></td><td>Exact equality match</td></tr>
+            <tr><td><code>not_equals(value)</code></td><td>Inequality match</td></tr>
+            <tr><td><code>in_(*values)</code></td><td>Field is one of the supplied values</td></tr>
+            <tr><td><code>not_in(*values)</code></td><td>Field is not any of the supplied values</td></tr>
+            <tr><td><code>contains(value)</code></td><td>Substring or array element match</td></tr>
+            <tr><td><code>exists(bool)</code></td><td>Field presence check</td></tr>
+            <tr><td><code>greater_than(n)</code> / <code>less_than(n)</code></td><td>Numeric comparison</td></tr>
+            <tr><td><code>like(pattern)</code></td><td>SQL-style LIKE with <code>%</code> wildcard</td></tr>
+            <tr><td><code>matches(regex)</code></td><td>Regular expression match</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── Footer ────────────────────────────────────── -->
+<footer>
+  <div class="container">
+    <p>
+      ITL Policy Builder &nbsp;·&nbsp;
+      <a href="LICENSE">Apache 2.0 License</a> &nbsp;·&nbsp;
+      <a href="docs/CLI.md">CLI Reference</a> &nbsp;·&nbsp;
+      <a href="docs/AZURE_QUICK_REFERENCE.md">Azure Quick Reference</a> &nbsp;·&nbsp;
+      <a href="docs/MULTI_FORMAT_GENERATION.md">Multi-Format Guide</a>
+    </p>
+  </div>
+</footer>
+
+<script>
+  // Mermaid init
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'dark',
+    themeVariables: {
+      background: '#161b22',
+      primaryColor: '#1c2128',
+      primaryTextColor: '#e6edf3',
+      primaryBorderColor: '#30363d',
+      lineColor: '#8b949e',
+      secondaryColor: '#1c2128',
+      tertiaryColor: '#1c2128',
+      edgeLabelBackground: '#161b22',
+    },
+    flowchart: { curve: 'basis' },
+  });
+
+  // Tab switching
+  document.querySelectorAll('[id^="tabs-"]').forEach(tabGroup => {
+    tabGroup.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        const targetId = tab.dataset.tab;
+        tabGroup.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        // find nearest sibling tab-panels
+        const panels = tabGroup.parentElement.querySelectorAll('.tab-panel');
+        panels.forEach(p => {
+          p.classList.toggle('active', p.id === targetId);
+        });
+      });
+    });
+  });
+</script>
+
+</body>
+</html>

@@ -92,7 +92,7 @@ class PolicyAssignmentBuilder:
 
             .scope("/subscriptions/sub-001")
             .scope("/subscriptions/sub-001/resourceGroups/app-rg")
-            .scope("/providers/ITL.Management/managementGroups/prod-mg")
+            .scope("/providers/ITL.Core/managementGroups/prod-mg")
         """
         self._scope = scope
         return self

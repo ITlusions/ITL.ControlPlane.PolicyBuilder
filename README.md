@@ -15,6 +15,52 @@ Fluent DSL for defining governance policies for the ITL ControlPlane platform.
 - **Initiative Support** — Group policies into policy sets
 - **Multi-policy Framework** — ARM (control plane), Kyverno (Kubernetes), and custom policies
 
+## Multi-Platform Policy Builder
+
+The ITL Policy Builder is designed around a single principle: **define once, deploy everywhere**. A policy is expressed using the Python DSL and can be serialised into the native format of any supported target platform without changing the business logic.
+
+### Supported Platforms
+
+| Platform | Output Format | Enforcement Mechanism | Typical Scope |
+|---|---|---|---|
+| **Azure Resource Manager** | `PolicyDefinition` JSON | Azure Policy engine (Deny / Audit / Modify) | Subscription, Management Group |
+| **Kubernetes / Talos** | `ClusterPolicy` YAML | Kyverno admission webhook (Validate / Mutate / Audit) | Namespace, Cluster |
+| **ITL Control Plane** | ITL Policy JSON | ITL Control Plane API (custom resource provider) | Tenant, Resource Group |
+
+### Architecture
+
+```mermaid
+flowchart LR
+    subgraph Definition["Policy Definition  (Python DSL)"]
+        Builder["PolicyBuilder\nCondition DSL\nParameters\nInitiatives"]
+    end
+
+    subgraph Serialisation["Serialisation Layer"]
+        ARM["ARM Serialiser\nPolicyDefinition JSON"]
+        Kyverno["Kyverno Serialiser\nClusterPolicy YAML"]
+        ITL["ITL Serialiser\nITL Policy JSON"]
+    end
+
+    subgraph Deployment["Deployment Targets"]
+        Azure["Azure Policy\nSubscription / Management Group"]
+        K8s["Kubernetes Cluster\nKyverno Admission Controller"]
+        ITLCP["ITL Control Plane\nResource Provider API"]
+    end
+
+    Builder --> ARM --> Azure
+    Builder --> Kyverno --> K8s
+    Builder --> ITL --> ITLCP
+```
+
+### Design Principles
+
+- **Single source of truth** — The policy rule is written once in the DSL. Platform-specific serialisers handle the format differences.
+- **Platform parity** — Core concepts (conditions, effects, parameters, initiatives) map to equivalent constructs on each platform.
+- **Progressive deployment** — Policies can be deployed in `audit` mode on all platforms simultaneously before switching to enforcement.
+- **Composable initiatives** — Multiple policies can be grouped into an initiative and assigned in a single operation, regardless of target platform.
+
+---
+
 ## Installation
 
 ```bash
@@ -427,9 +473,9 @@ In addition to ARM-style policies, the PolicyBuilder SDK includes **Kyverno** �
 ### Why Kyverno for Talos?
 
 **Talos** is an immutable, minimal Linux distribution for Kubernetes. It pairs perfectly with **Kyverno** for:
-- 🔒 Pod security enforcement (prevent privileged containers)
-- 📦 Image security (enforce approved registries, disable latest tags)
-- 🌐 Network isolation (require NetworkPolicies)
+- Pod security enforcement (prevent privileged containers)
+- Image security (enforce approved registries, disable latest tags)
+- Network isolation (require NetworkPolicies)
 - PQC readiness (label workloads for quantum-safe crypto transition)
 
 ### Quick Start: Kyverno Policies
@@ -590,29 +636,35 @@ kubectl describe clusterpolicy pod-security-baseline
 
 ### Kyverno Architecture in ITL ControlPlane
 
-```
-┌──────────────────────────────────────────────────────────┐
-│         Talos Kubernetes Cluster                         │
-├──────────────────────────────────────────────────────────┤
-│                                                          │
-│  ┌────────────────────────────────────────────────────┐ │
-│  │        Kyverno Admission Controller                │ │
-│  │  (Webhook: mutating + validating)                  │ │
-│  └────────────────────────────────────────────────────┘ │
-│           ↑                                               │
-│           │ (intercepts Pod/Deployment creation)         │
-│           └─→ Apply Kyverno ClusterPolicies              │
-│                ├── Validate (block if deny)              │
-│                ├── Mutate (transform resources)          │
-│                └── Audit (log violations)                │
-│                                                          │
-│  Policies (from ITL Policy Builder):                    │
-│  ├── pod-security-baseline                              │
-│  ├── require-resource-limits                            │
-│  ├── disallow-latest-tag                                │
-│  └── talos-security-hardening                           │
-│                                                          │
-└──────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    PB["ITL Policy Builder"]
+
+    subgraph Cluster["Talos Kubernetes Cluster"]
+        subgraph Kyverno["Kyverno Admission Controller"]
+            Webhook["Mutating + Validating Webhook"]
+        end
+
+        subgraph Policies["Active ClusterPolicies"]
+            P1["pod-security-baseline"]
+            P2["require-resource-limits"]
+            P3["disallow-latest-tag"]
+            P4["talos-security-hardening"]
+        end
+
+        Resource["Pod / Deployment Creation"]
+        Validate["Validate — block non-compliant resources"]
+        Mutate["Mutate — transform resource definitions"]
+        Audit["Audit — log policy violations"]
+
+        Resource -->|intercepted by| Webhook
+        Policies -->|enforced by| Webhook
+        Webhook --> Validate
+        Webhook --> Mutate
+        Webhook --> Audit
+    end
+
+    PB -->|generates| Policies
 ```
 
 ---
@@ -646,9 +698,18 @@ itl-policy validate --file k8s.yaml
 # Deploy to Kubernetes
 itl-policy deploy --file k8s.yaml --target kubernetes --action audit
 
-# Deploy to Azure (via ITL Control Plane)
-itl-policy deploy --file azure.json --target itl-api \
-  --api-endpoint https://controlplane.example.com
+# Explain what policies a template contains
+itl-policy explain --template cis-azure --section AKS
+
+# Explain an Azure governance concept
+itl-policy explain --about management-group
+
+# Inventory all policies in a subscription
+itl-policy inventory --subscription-id "<sub-id>" --all-subscriptions
+
+# Describe a live Azure resource by name
+itl-policy describe subscription "Production" --format json
+itl-policy describe policy-assignment cis-azure-baseline --subscription-id "<sub-id>"
 ```
 
 ### Generate Multiple Formats
@@ -668,8 +729,11 @@ See [Multi-Format Generation Guide](docs/MULTI_FORMAT_GENERATION.md) for detaile
 | `list` | List available policy templates |
 | `generate` | Generate policies from templates (YAML/JSON) |
 | `validate` | Validate policies before deployment |
-| `deploy` | Deploy policies to Kubernetes or ITL Control Plane |
+| `deploy` | Deploy policies to Kubernetes, Azure, or ITL Control Plane |
 | `init` | Initialize CLI configuration file |
+| `explain` | Explain policy templates or Azure governance concepts (`--about`) |
+| `inventory` | Inventory assignments, definitions, and initiatives across subscriptions |
+| `describe` | Fetch live Azure details for a specific governance resource |
 
 ### Deployment Targets
 
@@ -684,6 +748,119 @@ See [Multi-Format Generation Guide](docs/MULTI_FORMAT_GENERATION.md) for detaile
 - **Dry-Run** — Simulate deployment without making changes
 
 For comprehensive CLI documentation, see [CLI Guide](docs/CLI.md).
+
+> **Note:** Historical implementation summaries and advisory documents (PQC action plans, risk assessments, monetisation strategy) have been moved to [`docs/archive/`](docs/archive/).
+
+---
+
+## Azure Deployment
+
+Deploy ARM-compatible policies directly to Azure subscriptions using the native Azure SDK.
+
+### Install Azure dependencies
+
+```bash
+pip install itl-policy-builder[azure]
+```
+
+### Deploy Policies to Azure (Python)
+
+```python
+import asyncio
+from itl_policy_builder.deploy import PolicyDeployer, DeployConfig, DeployTarget, DeployAction
+from itl_policy_builder import PolicyBuilder, Effect, field
+
+# Build a policy
+policy = (
+    PolicyBuilder("require-westeurope")
+    .display_name("Require West Europe Location")
+    .description("Ensures all resources are deployed in West Europe")
+    .category("General")
+    .mode("All")
+    .with_rule(
+        if_=field("location").not_equals("westeurope"),
+        then=Effect.DENY,
+        message="Resources must be deployed in West Europe",
+    )
+    .build()
+)
+
+# Configure deployment
+config = DeployConfig(
+    target=DeployTarget.AZURE,
+    azure_subscription_id="00000000-0000-0000-0000-000000000000",
+    azure_tenant_id="your-tenant-id",        # optional
+    azure_resource_group="rg-governance",    # optional
+    azure_assignment_scope="/subscriptions/00000000-0000-0000-0000-000000000000",
+    azure_credential="default",              # default | cli | env
+    action=DeployAction.ENFORCE,
+    dry_run=False,
+)
+
+deployer = PolicyDeployer(configs=[config])
+results = asyncio.run(deployer.deploy([policy.to_arm_dict()]))
+for r in results:
+    print(r.summary)
+```
+
+### Deploy a Policy Set (Initiative) to Azure
+
+```python
+from itl_policy_builder import PolicySetBuilder
+
+initiative = (
+    PolicySetBuilder("security-baseline")
+    .display_name("Security Baseline")
+    .description("Core security policies")
+    .category("Security")
+    .version("1.0.0")
+    .add_group("Tags", "Tagging requirements")
+    .add_policy(
+        "/providers/ITL.Authorization/policyDefinitions/require-tag-environment",
+        groups=["Tags"],
+    )
+    .add_policy(
+        "/providers/ITL.Authorization/policyDefinitions/deny-public-ip",
+        groups=["Security"],
+    )
+)
+
+# Serialize to ARM-compatible dict for deployment
+arm_dict = initiative.to_azure_dict()
+results = asyncio.run(deployer.deploy([arm_dict]))
+```
+
+### Deploy via CLI
+
+```bash
+# Generate BIO security initiative (Azure ARM format)
+itl-policy generate --template talos-security --style azure --format json --output azure-bio.json
+
+# Generate PQC transition initiative
+itl-policy generate --template pqc-transition --style azure --format json --output azure-pqc.json
+
+# Deploy to Azure
+itl-policy deploy --file azure-bio.json --target azure \
+  --subscription-id "00000000-0000-0000-0000-000000000000" \
+  --assignment-scope "/subscriptions/00000000-0000-0000-0000-000000000000" \
+  --action enforce
+
+# Deploy with explicit Azure CLI auth
+itl-policy deploy --file azure-bio.json --target azure \
+  --subscription-id "sub-id" \
+  --assignment-scope "/subscriptions/sub-id" \
+  --azure-auth cli
+```
+
+### Azure Authentication Methods
+
+| Method | Flag | Environment Variables |
+|--------|------|-----------------------|
+| DefaultAzureCredential (auto) | `--azure-auth default` | — |
+| Azure CLI (`az login`) | `--azure-auth cli` | — |
+| Service Principal | `--azure-auth env` | `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID` |
+
+For detailed Azure guidance, see [Azure Quick Reference](docs/AZURE_QUICK_REFERENCE.md).
 
 ---
 
@@ -741,42 +918,38 @@ Workflows include:
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                   ITL Policy Builder SDK                         │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐ │
-│  │   Builder   │  │ Conditions  │  │       Evaluator         │ │
-│  │  - Policy   │  │  - field()  │  │  - evaluate()           │ │
-│  │  - Assignment│  │  - all_of() │  │  - register_policy()    │ │
-│  │  - Initiative│  │  - any_of() │  │  - evaluate_for_deny()  │ │
-│  └─────────────┘  └─────────────┘  └─────────────────────────┘ │
-│                                                                 │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐ │
-│  │   Models    │  │    Enums    │  │       Templates         │ │
-│  │  - Definition│ │  - Effect   │  │  - allowed-locations    │ │
-│  │  - Assignment│ │  - Mode     │  │  - require-tag          │ │
-│  │  - Compliance│ │  - State    │  │  - deny-public-ip       │ │
-│  └─────────────┘  └─────────────┘  └─────────────────────────┘ │
-│                                                                 │
-│  ┌──────────────────────┐  ┌──────────────────────────────────┐ │
-│  │  Kyverno Builder     │  │  Deployment Module (Optional)    │ │
-│  │  - Policies          │  │  - PolicyDeployer                │ │
-│  │  - Validation Rules  │  │  - KubernetesTarget              │ │
-│  │  - Mutation Rules    │  │  - ITLAPITarget                  │ │
-│  └──────────────────────┘  └──────────────────────────────────┘ │
-│                                                                 │
-│  ┌──────────────────────────────────────────────────────────────┐ │
-│  │  CLI Tool (Optional: pip install itl-policy-builder[cli])    │ │
-│  │  ├── generate — Generate from templates                      │ │
-│  │  ├── list — List available policies                          │ │
-│  │  ├── validate — Validate before deployment                   │ │
-│  │  ├── deploy — Deploy to K8s and/or ITL API                   │ │
-│  │  └── init — Initialize configuration                         │ │
-│  └──────────────────────────────────────────────────────────────┘ │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph SDK["ITL Policy Builder SDK"]
+        direction TB
+
+        subgraph Core["Core Modules"]
+            Builder["Builder\nPolicy · Assignment · Initiative"]
+            Conditions["Conditions\nfield · all_of · any_of"]
+            Evaluator["Evaluator\nevaluate · register_policy · evaluate_for_deny"]
+        end
+
+        subgraph Data["Data Layer"]
+            Models["Models\nDefinition · Assignment · Compliance"]
+            Enums["Enums\nEffect · Mode · State"]
+            Templates["Templates\nallowed-locations · require-tag · deny-public-ip"]
+        end
+
+        subgraph Ext["Extensions (Optional)"]
+            KyvernoBuilder["Kyverno Builder\nPolicies · Validation · Mutation Rules"]
+            DeploymentModule["Deployment Module\nPolicyDeployer · KubernetesTarget · ITLAPITarget · AzureTarget"]
+        end
+
+        subgraph CLI["CLI Tool  —  pip install itl-policy-builder[cli]"]
+            CLICommands["list  ·  generate  ·  validate  ·  deploy  ·  init  ·  explain  ·  inventory  ·  describe"]
+        end
+    end
+
+    Core --> Ext
+    Core --> CLI
+    Data --> Ext
+    Data --> CLI
+    Ext --> CLI
 ```
 
 ## License

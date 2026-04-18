@@ -468,7 +468,7 @@ class RequireCustomerManagedKeysPolicy(BIOPolicy):
                         field("type").equals("ITL.Sql/databases"),
                         field("type").equals("ITL.Compute/disks"),
                     ),
-                    field("properties.encryption.keySource").not_equals("Microsoft.Keyvault"),
+                    field("properties.encryption.keySource").not_equals("ITL.Keyvault"),
                 ),
                 then=Effect.AUDIT,
                 message="Gevoelige resources moeten customer-managed keys gebruiken voor versleuteling",

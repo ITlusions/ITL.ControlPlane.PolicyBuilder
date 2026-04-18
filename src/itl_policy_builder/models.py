@@ -326,6 +326,15 @@ class PolicySetDefinition(BaseModel):
         """Serialize to ARM-compatible JSON."""
         return self.model_dump_json(by_alias=True, indent=indent)
 
+    def to_arm_dict(self) -> Dict[str, Any]:
+        """Convert to ARM-compatible dictionary."""
+        return self.model_dump(by_alias=True)
+
+    @classmethod
+    def from_arm_json(cls, json_str: str) -> "PolicySetDefinition":
+        """Deserialize from ARM JSON."""
+        return cls.model_validate_json(json_str)
+
 
 class PolicyExemption(BaseModel):
     """

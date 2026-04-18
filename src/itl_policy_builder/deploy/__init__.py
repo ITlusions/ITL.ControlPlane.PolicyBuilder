@@ -22,12 +22,14 @@ Supported Targets:
 from itl_policy_builder.deploy.deployer import (
     PolicyDeployer,
     DeployTarget,
+    DeployAction,
     DeployConfig,
     DeployResult,
 )
 
 __all__ = [
     "PolicyDeployer",
+    "DeployAction",
     "DeployTarget",
     "DeployConfig",
     "DeployResult",

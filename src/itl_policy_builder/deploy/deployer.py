@@ -358,14 +358,16 @@ class AzureTarget(DeploymentTarget):
         
         try:
             from azure.identity import DefaultAzureCredential, AzureCliCredential, EnvironmentCredential
-            from azure.mgmt.authorization import AuthorizationManagementClient
+            from azure.mgmt.resource.policy import PolicyClient
         except ImportError:
             result.success = False
             result.errors.append(
-                "Azure SDK not installed. Install with: pip install azure-mgmt-authorization azure-identity"
+                "Azure SDK not installed. Install with: pip install azure-mgmt-resource azure-identity"
             )
             return result
-        
+
+        import datetime
+
         try:
             # Get credentials based on auth method
             credential = None
@@ -381,132 +383,188 @@ class AzureTarget(DeploymentTarget):
                     credential = DefaultAzureCredential()
             else:  # default
                 credential = DefaultAzureCredential()
-            
-            # Create client
-            client = AuthorizationManagementClient(
+
+            # Create Azure Policy client (not AuthorizationManagementClient — that is RBAC only)
+            client = PolicyClient(
                 credential=credential,
                 subscription_id=self.config.azure_subscription_id,
             )
-            
-            # Deploy each policy
+
+            # Deploy each policy or policy set (initiative)
             for policy in policies:
                 try:
-                    # Extract policy definition
                     policy_name = policy.get("name", policy.get("metadata", {}).get("name"))
-                    
+
                     if not policy_name:
                         result.failed_count += 1
                         result.errors.append("Policy missing name field")
                         continue
-                    
-                    # Create policy definition
-                    policy_def = {
-                        "properties": {
-                            "displayName": policy.get("properties", {}).get("displayName", policy_name),
-                            "policyType": "Custom",
-                            "mode": policy.get("properties", {}).get("mode", "All"),
-                            "description": policy.get("properties", {}).get("description", ""),
-                            "policyRule": policy.get("properties", {}).get("policyRule", {}),
-                            "parameters": policy.get("properties", {}).get("parameters", {}),
-                            "metadata": {
-                                "category": policy.get("properties", {}).get("metadata", {}).get("category", "General"),
+
+                    props = policy.get("properties", {})
+                    is_initiative = (
+                        "policyDefinitions" in props
+                        or policy.get("type") in (
+                            "Microsoft.Authorization/policySetDefinitions",
+                            "ITL.Authorization/policySetDefinitions",
+                        )
+                    )
+                    created_at = datetime.datetime.utcnow().isoformat()
+
+                    if is_initiative:
+                        # --- Policy Set (Initiative) ---
+                        initiative_def = {
+                            "properties": {
+                                "displayName": props.get("displayName", policy_name),
+                                "policyType": "Custom",
+                                "description": props.get("description", ""),
+                                "parameters": props.get("parameters", {}),
+                                "policyDefinitions": props.get("policyDefinitions", []),
+                                "policyDefinitionGroups": props.get("policyDefinitionGroups", []),
+                                "metadata": {
+                                    "category": props.get("metadata", {}).get("category", "General"),
+                                },
                             }
                         }
-    }
-                    
-                    # Create policy definition in Azure
-                    create_result = client.policy_definitions.create_or_update(
-                        policy_definition_name=policy_name,
-                        parameters=policy_def,
-                    )
-                    
-                    # Create assignment
-                    assignment_name = f"{policy_name}-assign-{self.config.action}"
+
+                        create_result = client.policy_set_definitions.create_or_update(
+                            policy_set_definition_name=policy_name,
+                            parameters=initiative_def,
+                        )
+                    else:
+                        # --- Individual Policy Definition ---
+                        policy_def = {
+                            "properties": {
+                                "displayName": props.get("displayName", policy_name),
+                                "policyType": "Custom",
+                                "mode": props.get("mode", "All"),
+                                "description": props.get("description", ""),
+                                "policyRule": props.get("policyRule", {}),
+                                "parameters": props.get("parameters", {}),
+                                "metadata": {
+                                    "category": props.get("metadata", {}).get("category", "General"),
+                                },
+                            }
+                        }
+
+                        create_result = client.policy_definitions.create_or_update(
+                            policy_definition_name=policy_name,
+                            parameters=policy_def,
+                        )
+
+                    # Create assignment (works for both policies and initiatives)
+                    assignment_name = f"{policy_name[:90]}-assign"
                     assignment = {
                         "properties": {
                             "policyDefinitionId": create_result.id,
                             "scope": self.config.azure_assignment_scope,
-                            "enforcementMode": "DoNotEnforce" if self.config.action == DeployAction.AUDIT else "Default",
+                            "enforcementMode": (
+                                "DoNotEnforce" if self.config.action == DeployAction.AUDIT else "Default"
+                            ),
                             "parameters": {},
                             "metadata": {
                                 "managedBy": "itl-policy-builder",
-                                "createdTime": __import__("datetime").datetime.utcnow().isoformat(),
-                            }
+                                "createdTime": created_at,
+                            },
                         }
                     }
-                    
+
                     assign_result = client.policy_assignments.create(
                         scope=self.config.azure_assignment_scope,
                         policy_assignment_name=assignment_name,
                         parameters=assignment,
                     )
-                    
+
                     result.deployed_count += 1
                     result.details[policy_name] = {
+                        "type": "initiative" if is_initiative else "policy",
                         "definition_id": create_result.id,
                         "assignment_id": assign_result.id,
                     }
-                
+
                 except Exception as e:
                     result.failed_count += 1
                     result.errors.append(f"Failed to deploy {policy_name}: {str(e)}")
-        
+
         except Exception as e:
             result.success = False
             result.errors.append(f"Azure deployment failed: {str(e)}")
             return result
-        
+
         result.success = result.failed_count == 0
         return result
     
     async def validate(self, policies: List[Dict[str, Any]]) -> DeployResult:
-        """Validate Azure ARM policies."""
+        """Validate Azure ARM policies and policy sets (initiatives)."""
         result = DeployResult(
             success=True,
             target=DeployTarget.AZURE,
         )
-        
+
         for policy in policies:
             policy_name = policy.get("name", policy.get("metadata", {}).get("name"))
-            
-            # Validate structure
+
             if not policy_name:
                 result.errors.append("Policy missing name field")
                 continue
-            
+
             props = policy.get("properties", {})
-            if not props.get("policyRule"):
-                result.errors.append(f"Policy {policy_name} missing policyRule")
-                continue
-            
+            is_initiative = (
+                "policyDefinitions" in props
+                or policy.get("type") in (
+                    "Microsoft.Authorization/policySetDefinitions",
+                    "ITL.Authorization/policySetDefinitions",
+                )
+            )
+
+            if is_initiative:
+                if not props.get("policyDefinitions"):
+                    result.errors.append(
+                        f"Initiative {policy_name} missing policyDefinitions"
+                    )
+                    continue
+            else:
+                if not props.get("policyRule"):
+                    result.errors.append(f"Policy {policy_name} missing policyRule")
+                    continue
+
             result.deployed_count += 1
-        
+
         result.success = len(result.errors) == 0
         return result
     
     async def get_status(self, policy_id: str) -> Dict[str, Any]:
-        """Get Azure policy status."""
+        """Get Azure policy or initiative status."""
         try:
             from azure.identity import DefaultAzureCredential
-            from azure.mgmt.authorization import AuthorizationManagementClient
+            from azure.mgmt.resource.policy import PolicyClient
         except ImportError:
             return {"error": "Azure SDK not installed"}
-        
+
         try:
             credential = DefaultAzureCredential()
-            client = AuthorizationManagementClient(
+            client = PolicyClient(
                 credential=credential,
                 subscription_id=self.config.azure_subscription_id,
             )
-            
-            # Try to get the policy definition
-            result = client.policy_definitions.get(policy_definition_name=policy_id)
-            
+
+            # Try policy definition first, then policy set definition
+            try:
+                defn = client.policy_definitions.get(policy_definition_name=policy_id)
+                return {
+                    "id": defn.id,
+                    "name": defn.name,
+                    "type": defn.type,
+                    "display_name": defn.display_name,
+                }
+            except Exception:
+                pass
+
+            initiative = client.policy_set_definitions.get(policy_set_definition_name=policy_id)
             return {
-                "id": result.id,
-                "name": result.name,
-                "type": result.type,
-                "properties": result.properties,
+                "id": initiative.id,
+                "name": initiative.name,
+                "type": initiative.type,
+                "display_name": initiative.display_name,
             }
         except Exception as e:
             return {"error": str(e)}

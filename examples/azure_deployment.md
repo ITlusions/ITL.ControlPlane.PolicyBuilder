@@ -168,7 +168,7 @@ itl-policy deploy \
   --file policies.json \
   --target azure \
   --subscription-id "00000000-0000-0000-0000-000000000000" \
-  --assignment-scope "/providers/Microsoft.Management/managementGroups/my-mg"
+  --assignment-scope "/providers/ITL.Core/managementGroups/my-mg"
 ```
 
 Applies to all subscriptions under the management group.
