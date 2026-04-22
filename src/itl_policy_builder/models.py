@@ -227,6 +227,15 @@ class PolicyAssignmentProperties(BaseModel):
         alias="nonComplianceMessages",
         description="Custom messages for non-compliance",
     )
+    overrides: Optional[List[Dict[str, Any]]] = Field(
+        default=None,
+        description="Override policy effect for selected resources",
+    )
+    resource_selectors: Optional[List[Dict[str, Any]]] = Field(
+        default=None,
+        alias="resourceSelectors",
+        description="Limit assignment to a subset of resources by location or type",
+    )
 
 
 class PolicyAssignment(BaseModel):
@@ -294,6 +303,11 @@ class PolicySetDefinitionReference(BaseModel):
         alias="groupNames",
         description="Groups this policy belongs to",
     )
+    policy_definition_version: Optional[str] = Field(
+        default=None,
+        alias="policyDefinitionVersion",
+        description="Pinned version of the referenced policy definition",
+    )
 
 
 class PolicySetDefinition(BaseModel):
@@ -336,6 +350,53 @@ class PolicySetDefinition(BaseModel):
         return cls.model_validate_json(json_str)
 
 
+class PolicyExemptionProperties(BaseModel):
+    """
+    Typed properties for a policy exemption.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    policy_assignment_id: str = Field(
+        ...,
+        alias="policyAssignmentId",
+        description="ID of the policy assignment this exemption applies to",
+    )
+    exemption_category: ExemptionCategory = Field(
+        ...,
+        alias="exemptionCategory",
+        description="Waiver or Mitigated",
+    )
+    display_name: Optional[str] = Field(
+        default=None,
+        alias="displayName",
+        description="Human-readable display name",
+    )
+    description: Optional[str] = Field(
+        default=None,
+        description="Exemption description",
+    )
+    expires_on: Optional[datetime] = Field(
+        default=None,
+        alias="expiresOn",
+        description="Expiry date/time (ISO 8601); exemption auto-expires after this",
+    )
+    policy_definition_reference_ids: Optional[List[str]] = Field(
+        default=None,
+        alias="policyDefinitionReferenceIds",
+        description="Limit exemption to specific definitions within an initiative",
+    )
+    assignment_scope_validation: Optional[str] = Field(
+        default=None,
+        alias="assignmentScopeValidation",
+        description="'Default' or 'DoNotValidate'",
+    )
+    metadata: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Additional metadata",
+    )
+
+
 class PolicyExemption(BaseModel):
     """
     A policy exemption that excludes resources from policy evaluation.
@@ -355,8 +416,8 @@ class PolicyExemption(BaseModel):
         default="ITL.Authorization/policyExemptions",
         description="Resource type",
     )
-    properties: Dict[str, Any] = Field(
-        default_factory=dict,
+    properties: PolicyExemptionProperties = Field(
+        ...,
         description="Exemption properties",
     )
 
@@ -395,6 +456,11 @@ class ComplianceResult(BaseModel):
     reason: Optional[str] = Field(
         default=None,
         description="Reason for non-compliance",
+    )
+    last_evaluation_time: Optional[datetime] = Field(
+        default=None,
+        alias="lastEvaluationTime",
+        description="Timestamp of the most recent evaluation",
     )
     details: Optional[Dict[str, Any]] = Field(
         default=None,

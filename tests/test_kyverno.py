@@ -3,7 +3,7 @@
 import json
 import pytest
 
-from itl_policy_builder.kyverno import (
+from itl_policy_builder.export.kyverno import (
     KyvernoPolicyBuilder,
     KyvernoPodSecurityBuilder,
     KyvernoImageSecurityBuilder,

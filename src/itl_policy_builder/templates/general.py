@@ -7,7 +7,7 @@ across various resource types and scenarios.
 
 from typing import Any, Dict, List, Optional, Tuple, Type
 
-from itl_policy_builder.builder import PolicyBuilder
+from itl_policy_builder.builders.policy import PolicyBuilder
 from itl_policy_builder.conditions import all_of, field
 from itl_policy_builder.enums import Effect, PolicyType
 from itl_policy_builder.models import PolicyDefinition

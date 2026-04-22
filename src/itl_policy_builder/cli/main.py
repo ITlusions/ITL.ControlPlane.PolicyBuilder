@@ -28,6 +28,9 @@ from itl_policy_builder.templates.kyverno import (
     list_kyverno_policies,
     get_talos_security_bundle,
     get_pqc_transition_bundle,
+    get_profile,
+    list_profiles,
+    KYVERNO_PROFILE_CATEGORIES,
 )
 from itl_policy_builder.deploy import (
     PolicyDeployer,
@@ -48,12 +51,22 @@ def cli():
 # GENERATE COMMAND
 # ============================================================================
 
+# All Kyverno profile names (kept in sync with _KYVERNO_PROFILE_BUILDERS)
+_KYVERNO_PROFILE_NAMES = ["security", "network", "registry", "strict", "talos", "pqc", "all"]
+_ALL_TEMPLATES = ["talos-security", "pqc-transition", "cis-azure"] + _KYVERNO_PROFILE_NAMES
+
+
 @cli.command()
 @click.option(
     "--template",
-    type=click.Choice(["talos-security", "pqc-transition", "cis-azure", "custom"]),
+    type=click.Choice(_ALL_TEMPLATES),
     default="talos-security",
-    help="Policy template to use",
+    help=(
+        "Policy template to use. "
+        "Kyverno profiles: security, network, registry, strict, talos, pqc, all. "
+        "Legacy bundles: talos-security, pqc-transition. "
+        "Azure: cis-azure."
+    ),
 )
 @click.option(
     "--output",
@@ -79,7 +92,11 @@ def generate(template: str, output: Optional[str], style: str, format: str):
         # Load template policies based on style
         if style == "kyverno":
             # Kubernetes-native Kyverno policies
-            if template == "talos-security":
+            if template in _KYVERNO_PROFILE_NAMES:
+                # New profile-based generation
+                profile = get_profile(template)
+                policies = profile.policies
+            elif template == "talos-security":
                 policies = get_talos_security_bundle()
             elif template == "pqc-transition":
                 policies = get_pqc_transition_bundle()
@@ -180,16 +197,37 @@ def generate(template: str, output: Optional[str], style: str, format: str):
 @click.option(
     "--category",
     type=click.Choice(["security", "image", "network", "pqc", "talos", "governance"]),
-    help="Filter by category",
+    help="Filter by policy category",
 )
-def list(category: Optional[str]):
-    """List available policy templates."""
+@click.option(
+    "--profiles",
+    is_flag=True,
+    default=False,
+    help="List available Kyverno profiles instead of individual policies",
+)
+def list(category: Optional[str], profiles: bool):
+    """List available Kyverno policies or profiles."""
     try:
         from itl_policy_builder.templates.kyverno import (
             KYVERNO_CATEGORIES,
             list_kyverno_policies,
         )
-        
+
+        if profiles:
+            available = list_profiles()
+            click.echo(f"\nAvailable profiles ({len(available)}):\n")
+            for name in available:
+                prof = get_profile(name)
+                category_label = KYVERNO_PROFILE_CATEGORIES.get(name, "")
+                click.echo(f"  {name:10s}  {prof.display_name}")
+                click.echo(f"  {'':10s}  {prof.description}")
+                if category_label:
+                    click.echo(f"  {'':10s}  Category   : {category_label}")
+                click.echo(f"  {'':10s}  Policies   : {len(prof)}")
+                click.echo()
+            click.echo("Generate with: itl-policy generate --template <profile-name>")
+            return
+
         if category:
             if category not in KYVERNO_CATEGORIES:
                 click.echo(f"Unknown category: {category}", err=True)
@@ -197,15 +235,16 @@ def list(category: Optional[str]):
             policies = KYVERNO_CATEGORIES[category]
         else:
             policies = list_kyverno_policies()
-        
+
         click.echo(f"\nAvailable policies ({len(policies)}):\n")
         for policy in policies:
             click.echo(f"  • {policy}")
-        
+
         if not category:
             click.echo(f"\nCategories: {', '.join(KYVERNO_CATEGORIES.keys())}")
             click.echo("Use --category to filter by category")
-    
+            click.echo("Use --profiles to list available policy profiles")
+
     except Exception as e:
         click.echo(f"❌ Error: {str(e)}", err=True)
         sys.exit(1)
@@ -2415,6 +2454,275 @@ def _publish_to_git(
         _git("push", "origin", git_branch)
 
     click.secho(f"\n✅ Published '{name}' v{version} to {git_repo} ({git_branch}/{git_path}/{name}/v{version}/)", fg="green")
+
+
+# ============================================================================
+# RENDER COMMAND  (generate IaC files from resource/policy specs)
+# ============================================================================
+
+@cli.command("render")
+@click.option(
+    "--resources",
+    "-r",
+    type=click.Path(exists=True),
+    default=None,
+    help="JSON file with a list of ITL resource specs.",
+)
+@click.option(
+    "--policies",
+    "-p",
+    type=click.Path(exists=True),
+    default=None,
+    help="JSON file with a list of policy specs (optional).",
+)
+@click.option(
+    "--renderer",
+    type=click.Choice(["arm", "bicep", "terraform", "pulumi"]),
+    default="bicep",
+    show_default=True,
+    help="IaC renderer to use.",
+)
+@click.option(
+    "--platform",
+    type=click.Choice(["azure", "kubernetes", "talos"]),
+    default="azure",
+    show_default=True,
+    help="Target platform.",
+)
+@click.option(
+    "--location",
+    default="westeurope",
+    show_default=True,
+    help="Azure region (azure platform only).",
+)
+@click.option(
+    "--stack",
+    default="itl-stack",
+    show_default=True,
+    help="Stack / project name embedded in generated files.",
+)
+@click.option(
+    "--output",
+    "-o",
+    type=click.Path(),
+    default="./iac-output",
+    show_default=True,
+    help="Directory to write generated files into.",
+)
+def render(
+    resources: Optional[str],
+    policies: Optional[str],
+    renderer: str,
+    platform: str,
+    location: str,
+    stack: str,
+    output: str,
+) -> None:
+    """Render ITL resources/policies to IaC files (ARM, Bicep, Terraform, Pulumi)."""
+    try:
+        from itl_controlplane_sdk.iac import (
+            ComponentType,
+            Platform,
+            RenderContext,
+            get_renderer,
+        )
+    except ImportError:
+        click.echo(
+            "❌ itl-controlplane-sdk[iac] is required. "
+            "Install with: pip install itl-controlplane-sdk[iac]",
+            err=True,
+        )
+        sys.exit(1)
+
+    resource_list: list = []
+    policy_list: list = []
+
+    if resources:
+        resource_list = json.loads(Path(resources).read_text())
+        if not isinstance(resource_list, list):
+            click.echo("❌ --resources file must contain a JSON array.", err=True)
+            sys.exit(1)
+
+    if policies:
+        policy_list = json.loads(Path(policies).read_text())
+        if not isinstance(policy_list, list):
+            click.echo("❌ --policies file must contain a JSON array.", err=True)
+            sys.exit(1)
+
+    if not resource_list and not policy_list:
+        click.echo("❌ Provide at least --resources or --policies.", err=True)
+        sys.exit(1)
+
+    component_type = ComponentType.ALL
+    if resource_list and not policy_list:
+        component_type = ComponentType.RESOURCE
+    elif policy_list and not resource_list:
+        component_type = ComponentType.POLICY
+
+    ctx = RenderContext(
+        platform=Platform(platform),
+        component_type=component_type,
+        resources=resource_list,
+        policies=policy_list,
+        location=location,
+        stack_name=stack,
+    )
+
+    r = get_renderer(renderer)
+    out = r.render(ctx)
+    written = out.write_to(output)
+
+    click.secho(f"\n✅ Rendered {len(written)} file(s) to {output}/", fg="green")
+    for f in written:
+        rel = Path(f).relative_to(Path(output).resolve()) if Path(f).is_absolute() else Path(f)
+        click.echo(f"   {rel}")
+
+
+# ============================================================================
+# PROVISION COMMAND  (render + pulumi up/preview/destroy)
+# ============================================================================
+
+@cli.command("provision")
+@click.option(
+    "--resources",
+    "-r",
+    type=click.Path(exists=True),
+    required=True,
+    help="JSON file with a list of ITL resource specs.",
+)
+@click.option(
+    "--policies",
+    "-p",
+    type=click.Path(exists=True),
+    default=None,
+    help="JSON file with Azure policy specs (optional).",
+)
+@click.option(
+    "--stack",
+    default="itl-stack",
+    show_default=True,
+    help="Pulumi stack name.",
+)
+@click.option(
+    "--project",
+    default="itl-infrastructure",
+    show_default=True,
+    help="Pulumi project name.",
+)
+@click.option(
+    "--location",
+    default="westeurope",
+    show_default=True,
+    help="Azure region.",
+)
+@click.option(
+    "--profile",
+    default=None,
+    help="ITL profile name (applied as tag to all resources).",
+)
+@click.option(
+    "--action",
+    type=click.Choice(["preview", "up", "destroy"]),
+    default="preview",
+    show_default=True,
+    help="Pulumi action to run.",
+)
+@click.option(
+    "--work-dir",
+    default=None,
+    type=click.Path(),
+    help="Directory for generated Pulumi program (default: temporary dir).",
+)
+@click.option(
+    "--config",
+    multiple=True,
+    help="Extra Pulumi config as key=value (repeatable).",
+)
+def provision(
+    resources: str,
+    policies: Optional[str],
+    stack: str,
+    project: str,
+    location: str,
+    profile: Optional[str],
+    action: str,
+    work_dir: Optional[str],
+    config: tuple,
+) -> None:
+    """Provision ITL Azure resources using Pulumi (preview / up / destroy).
+
+    \b
+    Examples:
+      itl-policy provision -r resources.json --action preview
+      itl-policy provision -r resources.json --stack prod --action up
+      itl-policy provision -r resources.json --stack prod --action destroy
+    """
+    try:
+        from itl_controlplane_sdk.pulumi.azure import ITLAzureStack
+    except ImportError:
+        click.echo(
+            "❌ itl-controlplane-sdk[iac-azure] is required. "
+            "Install with: pip install itl-controlplane-sdk[iac-azure]",
+            err=True,
+        )
+        sys.exit(1)
+
+    resource_list = json.loads(Path(resources).read_text())
+    if not isinstance(resource_list, list):
+        click.echo("❌ --resources file must contain a JSON array.", err=True)
+        sys.exit(1)
+
+    policy_list: list = []
+    if policies:
+        policy_list = json.loads(Path(policies).read_text())
+
+    # Parse extra config values
+    extra_config: dict = {}
+    for item in config:
+        if "=" not in item:
+            click.echo(f"❌ --config must be key=value, got: {item}", err=True)
+            sys.exit(1)
+        k, v = item.split("=", 1)
+        extra_config[k] = v
+
+    az_stack = ITLAzureStack(
+        stack_name=stack,
+        project_name=project,
+        location=location,
+        resources=resource_list,
+        policies=policy_list,
+        profile_name=profile,
+        work_dir=work_dir,
+        pulumi_config=extra_config,
+    )
+
+    click.echo(
+        f"🔧 Stack: {project}/{stack}  |  {len(resource_list)} resource(s)  |  action: {action}"
+    )
+
+    if action == "preview":
+        click.echo("Running pulumi preview …\n")
+        output_text = asyncio.run(az_stack.preview())
+        click.echo(output_text)
+    elif action == "up":
+        click.echo("Running pulumi up …\n")
+        result = asyncio.run(az_stack.up())
+        if result["outputs"]:
+            click.secho("\nOutputs:", fg="cyan")
+            for k, v in result["outputs"].items():
+                click.echo(f"  {k}: {v}")
+        changes = result["summary"].get("resource_changes") or {}
+        click.secho(
+            f"\n✅ Done  —  {changes}",
+            fg="green",
+        )
+    elif action == "destroy":
+        if not click.confirm("This will DESTROY all resources in this stack. Continue?"):
+            click.echo("Aborted.")
+            return
+        click.echo("Running pulumi destroy …\n")
+        asyncio.run(az_stack.destroy())
+        click.secho("✅ Stack destroyed.", fg="green")
 
 
 if __name__ == "__main__":

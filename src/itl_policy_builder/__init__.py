@@ -39,18 +39,24 @@ from itl_policy_builder.enums import (
     PolicyType,
     ComplianceState,
     AssignmentScope,
+    ExemptionCategory,
+    RemediationState,
+    ParameterType,
 )
 from itl_policy_builder.conditions import (
     Condition,
     field,
+    array_field,
     all_of,
     any_of,
     not_,
     count,
     value,
     current,
+    request_context,
+    RequestContextCondition,
 )
-from itl_policy_builder.builder import (
+from itl_policy_builder.builders.policy import (
     PolicyBuilder,
     PolicyRule,
 )
@@ -62,11 +68,17 @@ from itl_policy_builder.models import (
     PolicyAssignmentProperties,
     PolicySetDefinition,
     PolicyExemption,
+    PolicyExemptionProperties,
     ComplianceResult,
 )
-from itl_policy_builder.assignment import PolicyAssignmentBuilder
-from itl_policy_builder.initiative import PolicySetBuilder
-from itl_policy_builder.evaluator import PolicyEvaluator
+from itl_policy_builder.builders.assignment import PolicyAssignmentBuilder
+from itl_policy_builder.builders.initiative import PolicySetBuilder
+from itl_policy_builder.evaluation.evaluator import PolicyEvaluator
+from itl_policy_builder.builders.exemption import PolicyExemptionBuilder
+from itl_policy_builder.builders.remediation import RemediationBuilder
+from itl_policy_builder.testing.helpers import PolicyTestHelper, PolicyAssertionError
+from itl_policy_builder.export.arm import ArmDeploymentTemplate
+from itl_policy_builder.export.bicep import BicepCompiler, BicepCompilationError
 from itl_policy_builder.templates import (
     # General templates
     get_builtin_policy,
@@ -90,7 +102,7 @@ from itl_policy_builder.templates import (
     NIST_PQC_KEMs,
     NIST_PQC_SIGNATURES,
 )
-from itl_policy_builder.kyverno import (
+from itl_policy_builder.export.kyverno import (
     # Kyverno policy builders
     KyvernoPolicyBuilder,
     KyvernoPodSecurityBuilder,
@@ -116,20 +128,28 @@ __all__ = [
     "PolicyType",
     "ComplianceState",
     "AssignmentScope",
+    "ExemptionCategory",
+    "RemediationState",
+    "ParameterType",
     # Conditions
     "Condition",
     "field",
+    "array_field",
     "all_of",
     "any_of",
     "not_",
     "count",
     "value",
     "current",
+    "request_context",
+    "RequestContextCondition",
     # Builders
     "PolicyBuilder",
     "PolicyRule",
     "PolicyAssignmentBuilder",
     "PolicySetBuilder",
+    "PolicyExemptionBuilder",
+    "RemediationBuilder",
     # Models
     "PolicyDefinition",
     "PolicyDefinitionProperties",
@@ -138,9 +158,15 @@ __all__ = [
     "PolicyAssignmentProperties",
     "PolicySetDefinition",
     "PolicyExemption",
+    "PolicyExemptionProperties",
     "ComplianceResult",
     # Evaluation
     "PolicyEvaluator",
+    # Testing
+    "PolicyTestHelper",
+    "PolicyAssertionError",
+    # ARM Deploy Template
+    "ArmDeploymentTemplate",
     # General Templates
     "get_builtin_policy",
     "list_builtin_policies",
@@ -177,3 +203,4 @@ __all__ = [
     "ValidationAction",
     "MatchKind",
 ]
+

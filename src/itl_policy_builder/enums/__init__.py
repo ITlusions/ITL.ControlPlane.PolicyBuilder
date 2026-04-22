@@ -1,11 +1,31 @@
 """
-Policy enums for effects, modes, and states.
+Policy enums — public re-export surface for ``itl_policy_builder.enums``.
 
-These enums mirror Azure Policy semantics for compatibility
-while extending with ITL-specific functionality.
+All enum classes are defined directly in this package.  You can import from
+the package root or from specific sub-paths (if added later):
+
+    from itl_policy_builder.enums import Effect, PolicyMode
+    from itl_policy_builder.enums import ComplianceState, RemediationState
+    from itl_policy_builder.enums import AssignmentScope, ExemptionCategory
+    from itl_policy_builder.enums import PolicyType, ParameterType
 """
 
 from enum import Enum
+
+__all__ = [
+    # Core policy behaviour
+    "Effect",
+    "PolicyMode",
+    "PolicyType",
+    # Compliance & remediation lifecycle
+    "ComplianceState",
+    "RemediationState",
+    # Assignment scoping & exemptions
+    "AssignmentScope",
+    "ExemptionCategory",
+    # Parameter typing
+    "ParameterType",
+]
 
 
 class Effect(str, Enum):
