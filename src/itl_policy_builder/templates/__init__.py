@@ -5,6 +5,8 @@ Includes:
 - General cloud governance policies
 - BIO (Baseline Informatiebeveiliging Overheid) compliance policies
 - PQC (Post-Quantum Cryptography) readiness policies
+- Managed Identity and Workload Identity enforcement
+- CIS Azure Foundations Benchmark policies
 """
 
 from itl_policy_builder.templates.general import (
@@ -62,6 +64,22 @@ from itl_policy_builder.templates.pqc import (
     RequirePQCCertificatesPolicy,
     RequirePQCReadinessTagPolicy,
     AuditClassicalCryptoPolicy,
+)
+
+from itl_policy_builder.templates.managed_identity import (
+    get_managed_identity_policy,
+    list_managed_identity_policies,
+    get_all_managed_identity_policies,
+    get_managed_identity_initiative,
+    create_subscription_assignment,
+    MANAGED_IDENTITY_CATEGORY,
+    MANAGED_IDENTITY_RESOURCE_TYPES,
+    # Managed Identity Policy Classes
+    DenyPasswordCredentialsPolicy,
+    DenyCertificateCredentialsPolicy,
+    AuditLegacyCredentialsPolicy,
+    RequireManagedIdentityPolicy,
+    AllowWorkloadIdentityPolicy,
 )
 
 from itl_policy_builder.templates.cis_azure import (
@@ -278,6 +296,19 @@ __all__ = [
     "RequireCostCenterTagPolicy",
     "RequireOwnerTagGovPolicy",
     "RequireAllowedLocationsPolicy",
+    # Managed Identity
+    "get_managed_identity_policy",
+    "list_managed_identity_policies",
+    "get_all_managed_identity_policies",
+    "get_managed_identity_initiative",
+    "create_subscription_assignment",
+    "MANAGED_IDENTITY_CATEGORY",
+    "MANAGED_IDENTITY_RESOURCE_TYPES",
+    "DenyPasswordCredentialsPolicy",
+    "DenyCertificateCredentialsPolicy",
+    "AuditLegacyCredentialsPolicy",
+    "RequireManagedIdentityPolicy",
+    "AllowWorkloadIdentityPolicy",
 ]
 
 from itl_policy_builder.templates.kyverno import (

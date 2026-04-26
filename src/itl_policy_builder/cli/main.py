@@ -32,6 +32,11 @@ from itl_policy_builder.templates.kyverno import (
     list_profiles,
     KYVERNO_PROFILE_CATEGORIES,
 )
+from itl_policy_builder.templates.managed_identity import (
+    get_all_managed_identity_policies,
+    get_managed_identity_initiative,
+    create_subscription_assignment,
+)
 from itl_policy_builder.deploy import (
     PolicyDeployer,
     DeployConfig,
@@ -53,7 +58,7 @@ def cli():
 
 # All Kyverno profile names (kept in sync with _KYVERNO_PROFILE_BUILDERS)
 _KYVERNO_PROFILE_NAMES = ["security", "network", "registry", "strict", "talos", "pqc", "all"]
-_ALL_TEMPLATES = ["talos-security", "pqc-transition", "cis-azure"] + _KYVERNO_PROFILE_NAMES
+_ALL_TEMPLATES = ["talos-security", "pqc-transition", "cis-azure", "managed-identity"] + _KYVERNO_PROFILE_NAMES
 
 
 @cli.command()
@@ -65,7 +70,7 @@ _ALL_TEMPLATES = ["talos-security", "pqc-transition", "cis-azure"] + _KYVERNO_PR
         "Policy template to use. "
         "Kyverno profiles: security, network, registry, strict, talos, pqc, all. "
         "Legacy bundles: talos-security, pqc-transition. "
-        "Azure: cis-azure."
+        "Azure: cis-azure, managed-identity."
     ),
 )
 @click.option(
@@ -107,6 +112,13 @@ def generate(template: str, output: Optional[str], style: str, format: str):
                     err=True,
                 )
                 sys.exit(1)
+            elif template == "managed-identity":
+                click.echo(
+                    "Error: 'managed-identity' is an Azure ARM template. "
+                    "Use --style azure instead of --style kyverno.",
+                    err=True,
+                )
+                sys.exit(1)
             else:
                 click.echo(f"Unknown template: {template}", err=True)
                 sys.exit(1)
@@ -130,6 +142,12 @@ def generate(template: str, output: Optional[str], style: str, format: str):
                 elif template == "cis-azure":
                     # CIS Microsoft Azure Foundations Benchmark initiative
                     policies = [get_cis_initiative()]
+                elif template == "managed-identity":
+                    # Managed Identity and Workload Identity enforcement
+                    all_policies = get_all_managed_identity_policies()
+                    initiative = get_managed_identity_initiative()
+                    # Return all policies plus the initiative
+                    policies = all_policies + [initiative]
                 else:
                     click.echo(f"Unknown template: {template}", err=True)
                     sys.exit(1)
@@ -160,12 +178,14 @@ def generate(template: str, output: Optional[str], style: str, format: str):
             if format == "yaml":
                 try:
                     import yaml
-                    # Use to_arm_dict() to avoid double-encoding
+                    # Use to_arm_dict() and JSON round-trip for clean YAML (no Python tags)
                     arm_policies = [
                         p.to_arm_dict() if hasattr(p, 'to_arm_dict') else p
                         for p in policies
                     ]
-                    output_str = yaml.dump({"policies": arm_policies}, default_flow_style=False, sort_keys=False)
+                    # JSON round-trip to convert all Python objects to native types
+                    clean_policies = json.loads(json.dumps({"policies": arm_policies}, default=str))
+                    output_str = yaml.dump(clean_policies, default_flow_style=False, sort_keys=False)
                 except ImportError:
                     click.echo("Error: PyYAML required", err=True)
                     sys.exit(1)
