@@ -1,0 +1,12 @@
+id: /subscriptions/{subscription-id}/providers/ITL.Authorization/policyAssignments/managed-identity-enforcement
+name: managed-identity-enforcement
+type: ITL.Authorization/policyAssignments
+location: westeurope
+properties:
+  displayName: Managed Identity Enforcement (Subscription)
+  description: Enforces managed identity and workload identity usage across all resources.
+    Blocks creation of service principals with password/certificate credentials. Audits
+    resources without managed identities for remediation planning.
+  policyDefinitionId: /subscriptions/{subscription-id}/providers/ITL.Authorization/policySetDefinitions/managed-identity-enforcement
+  scope: /subscriptions/{subscription-id}
+  enforcementMode: Default

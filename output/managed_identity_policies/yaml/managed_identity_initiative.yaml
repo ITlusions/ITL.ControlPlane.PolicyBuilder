@@ -1,0 +1,22 @@
+id: /providers/ITL.Authorization/policySetDefinitions/managed-identity-enforcement
+name: managed-identity-enforcement
+type: ITL.Authorization/policySetDefinitions
+properties:
+  displayName: Managed Identity and Workload Identity Enforcement
+  policyType: Custom
+  policyDefinitions:
+  - policyDefinitionId: /providers/ITL.Authorization/policyDefinitions/deny-sp-password-credentials
+    policyDefinitionReferenceId: ref-fe76afb4
+  - policyDefinitionId: /providers/ITL.Authorization/policyDefinitions/deny-sp-certificate-credentials
+    policyDefinitionReferenceId: ref-879ce1e0
+  - policyDefinitionId: /providers/ITL.Authorization/policyDefinitions/audit-legacy-sp-credentials
+    policyDefinitionReferenceId: ref-27ef22b4
+  - policyDefinitionId: /providers/ITL.Authorization/policyDefinitions/require-managed-identity-resources
+    policyDefinitionReferenceId: ref-58541be5
+  - policyDefinitionId: /providers/ITL.Authorization/policyDefinitions/allow-workload-identity
+    policyDefinitionReferenceId: ref-2f200f00
+  description: Comprehensive policy set enforcing passwordless authentication across
+    Azure. Requires managed identities or workload identities with federated credentials.
+    Blocks service principals with password or certificate credentials.
+  metadata:
+    category: Identity

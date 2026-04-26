@@ -1,0 +1,33 @@
+id: /providers/ITL.Authorization/policyDefinitions/allow-workload-identity
+name: allow-workload-identity
+type: ITL.Authorization/policyDefinitions
+properties:
+  displayName: Allow Workload Identities with Federated Credentials
+  description: Permits service principals with ONLY federated identity credentials
+    (no passwords or certificates). Used for GitHub Actions, Azure DevOps, and other
+    OIDC-based CI/CD pipelines.
+  policyType: Custom
+  mode: All
+  metadata:
+    category: Identity
+  parameters: null
+  policyRule:
+    if:
+      allOf:
+      - field: type
+        equals: Microsoft.AAD/servicePrincipals
+      - field: properties.federatedIdentityCredentials
+        exists: true
+      - count:
+          field: properties.federatedIdentityCredentials
+        greater: 0
+      - not:
+          field: properties.passwordCredentials
+          exists: true
+      - not:
+          field: properties.certificateCredentials
+          exists: true
+    then:
+      effect: Audit
+      message: "\u2705 This service principal uses workload identity with federated\
+        \ credentials. This is a recommended passwordless authentication method."

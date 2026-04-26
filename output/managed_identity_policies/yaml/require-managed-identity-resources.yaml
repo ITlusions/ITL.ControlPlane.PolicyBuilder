@@ -1,0 +1,34 @@
+id: /providers/ITL.Authorization/policyDefinitions/require-managed-identity-resources
+name: require-managed-identity-resources
+type: ITL.Authorization/policyDefinitions
+properties:
+  displayName: Require Managed Identity on Supported Resources
+  description: Ensures that Azure resources supporting managed identities have one
+    assigned. Applies to VMs, App Service, Function Apps, Container Apps, AKS, Logic
+    Apps. Audits non-compliant resources for remediation planning.
+  policyType: Custom
+  mode: Indexed
+  metadata:
+    category: Identity
+  parameters: null
+  policyRule:
+    if:
+      allOf:
+      - field: type
+        in:
+        - Microsoft.Compute/virtualMachines
+        - Microsoft.Web/sites
+        - Microsoft.ContainerInstance/containerGroups
+        - Microsoft.ContainerService/managedClusters
+        - Microsoft.Logic/workflows
+        - Microsoft.Automation/automationAccounts
+      - not:
+          field: identity.type
+          in:
+          - SystemAssigned
+          - UserAssigned
+          - SystemAssigned, UserAssigned
+    then:
+      effect: Audit
+      message: This resource type supports managed identity but none is assigned.
+        Enable system-assigned or user-assigned managed identity.

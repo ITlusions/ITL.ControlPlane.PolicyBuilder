@@ -36,6 +36,8 @@ dev = [
     "pytest-cov>=4.0",
     "mypy>=1.0",
     "ruff>=0.1",
+    "jsonschema>=4.17",
+    "httpx>=0.24.0",
 ]
 yaml = [
     "PyYAML>=6.0",
