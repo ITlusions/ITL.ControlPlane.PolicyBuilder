@@ -526,7 +526,7 @@ class KyvernoProfileBuilder:
 
     Example::
 
-        from itl_policy_builder.kyverno import KyvernoProfileBuilder
+        from itl_policy_builder.export.kyverno import KyvernoProfileBuilder
 
         profile = (
             KyvernoProfileBuilder("itl-talos-profile")

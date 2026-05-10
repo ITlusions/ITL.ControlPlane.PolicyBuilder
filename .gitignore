@@ -8,6 +8,10 @@ __pycache__/
 *.pyo
 *.pyd
 
+# Output folder
+output/
+Output
+
 # Distribution / packaging
 dist/
 build/
