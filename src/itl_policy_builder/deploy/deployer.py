@@ -1,4 +1,4 @@
-"""
+﻿"""
 Core policy deployment engine — framework for deploying policies to various targets.
 
 Supports:
@@ -367,6 +367,7 @@ class AzureTarget(DeploymentTarget):
             return result
 
         import datetime
+        from datetime import timezone
 
         try:
             # Get credentials based on auth method
@@ -408,7 +409,7 @@ class AzureTarget(DeploymentTarget):
                             "ITL.Authorization/policySetDefinitions",
                         )
                     )
-                    created_at = datetime.datetime.utcnow().isoformat()
+                    created_at = datetime.datetime.now(timezone.utc).isoformat()
 
                     if is_initiative:
                         # --- Policy Set (Initiative) ---

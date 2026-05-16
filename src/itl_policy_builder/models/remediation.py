@@ -1,10 +1,10 @@
-"""
+﻿"""
 Remediation and compliance Pydantic models.
 """
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 from uuid import uuid4
 
@@ -41,7 +41,7 @@ class ComplianceResult(BaseModel):
         description="Compliance state of the resource",
     )
     timestamp: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(timezone.utc),
         description="When compliance was evaluated",
     )
     reason: Optional[str] = Field(
@@ -98,7 +98,7 @@ class RemediationTask(BaseModel):
         description="Current state of the task",
     )
     created_at: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(timezone.utc),
         alias="createdAt",
     )
     completed_at: Optional[datetime] = Field(
